@@ -7,7 +7,6 @@ import subprocess
 import glob
 
 
-
 def buildTindex(rasterFolder, rasterExtention='.tif'):
     rasterList = glob.glob(os.path.join(rasterFolder, '*{}'.format(rasterExtention)))
     print(rasterList)
@@ -103,12 +102,7 @@ if __name__ == "__main__":
                         action="store_true")
 
 
-
-
     args = parser.parse_args()
-
-
-
     rasterFolderLocation = args.imgDir
     vectorSrcFile = args.imgDir
     vectorPrefix = args.vectorPrefix
@@ -122,18 +116,20 @@ if __name__ == "__main__":
         rasterFolderBaseName = os.path.basename(os.path.dirname(rasterFolderLocation))
 
     geoJsonOutputDirectory = os.path.join(os.path.dirname(vectorSrcFile), rasterFolderBaseName)
-    chipSummaryList = createTiledGeoJsonFromSrc(rasterFolderLocation, vectorSrcFile, geoJsonOutputDirectory, rasterTileIndex='',
-                              geoJsonPrefix=vectorPrefix, rasterFileExtenstion=rasterFileExtension,
-                              rasterPrefixToReplace=rasterPrefix
-                              )
+    chipSummaryList = createTiledGeoJsonFromSrc(rasterFolderLocation, vectorSrcFile, geoJsonOutputDirectory,
+                                                rasterTileIndex='',
+                                                geoJsonPrefix=vectorPrefix,
+                                                rasterFileExtenstion=rasterFileExtension,
+                                                rasterPrefixToReplace=rasterPrefix
+                                                )
 
 
     outputCSVFileName = geoJsonOutputDirectory+"OSM_Proposal.csv"
     lT.createCSVSummaryFile(chipSummaryList, outputCSVFileName,
-                                replaceImageID=rasterPrefix+"_",
-                                pixPrecision=pixPrecision,
-                                createProposalsFile=createProposalFile
-                                )
+                            replaceImageID=rasterPrefix+"_",
+                            pixPrecision=pixPrecision,
+                            createProposalsFile=createProposalFile
+                            )
 
 
 

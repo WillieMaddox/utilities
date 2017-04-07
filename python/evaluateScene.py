@@ -6,6 +6,7 @@ import multiprocessing
 import time
 import argparse
 
+
 def writeAOISummaryToCSV(resultsDict,csvwriter):
 
     csvwriter.writerow(['TruthFile', resultsDict['TruthFile']])
@@ -32,6 +33,7 @@ def writeAOISummaryToCSV(resultsDict,csvwriter):
     #                'PerImageStatsResultList': result_list,
     #                'OutputSummaryFile': resultsOutputFile}
 
+
 def writePerChipToCSV(resultsDictList, csvwriter):
     resultsDict = resultsDictList[0]
     csvwriter.writerow(['ImageId', 'F1Score', 'True Positive Count', 'False Positive Count', 'False Negative Count'])
@@ -39,7 +41,6 @@ def writePerChipToCSV(resultsDictList, csvwriter):
         tmpList = [result[1]]
         tmpList.extend(result[0])
         csvwriter.writerow(tmpList)
-
 
 
 def writeResultsToScreen(resultsDict):
@@ -62,7 +63,6 @@ def writeResultsToScreen(resultsDict):
 #                'FalseNegativeTotal': false_neg_total,
 #                'PerImageStatsResultList': result_list,
 #                'OutputSummaryFile': resultsOutputFile}
-
 
 
 def evaluateSpaceNetSolution(summaryTruthFile, summaryProposalFile, resultsOutputFile='', processgeoJson=False,

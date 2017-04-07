@@ -31,91 +31,87 @@ def evaluateLineStringPlane(geom, label='Airplane'):
 
     transform_WGS84_To_UTM, transform_UTM_To_WGS84, utm_cs = gT.createUTMTransform(geom)
     geom.Transform(transform_WGS84_To_UTM)
-    pt0 = geom.GetPoint(0) # Tail
-    pt1 = geom.GetPoint(1) # Wing
-    pt2 = geom.GetPoint(2) # Nose
-    pt3 = geom.GetPoint(3) # Wing
-    Length = math.sqrt((pt2[0]-pt0[0])**2 + (pt2[1]-pt0[1])**2)
-    Width = math.sqrt((pt3[0] - pt1[0])**2 + (pt3[1] - pt1[1])**2)
-    Aspect = Length/Width
-    Direction = (math.atan2(pt2[0]-pt0[0], pt2[1]-pt0[1])*180/math.pi) % 360
-
+    pt0 = geom.GetPoint(0)  # Tail
+    pt1 = geom.GetPoint(1)  # Wing
+    pt2 = geom.GetPoint(2)  # Nose
+    pt3 = geom.GetPoint(3)  # Wing
+    Length = math.sqrt((pt2[0] - pt0[0]) ** 2 + (pt2[1] - pt0[1]) ** 2)
+    Width = math.sqrt((pt3[0] - pt1[0]) ** 2 + (pt3[1] - pt1[1]) ** 2)
+    Aspect = Length / Width
+    Direction = (math.atan2(pt2[0] - pt0[0], pt2[1] - pt0[1]) * 180 / math.pi) % 360
 
     geom.Transform(transform_UTM_To_WGS84)
 
     return [poly, Length, Width, Aspect, Direction]
 
+
 def evaluateLineStringBoat(geom, label='Boat', aspectRatio=3):
-
-
     transform_WGS84_To_UTM, transform_UTM_To_WGS84, utm_cs = gT.createUTMTransform(geom)
 
     geom.Transform(transform_WGS84_To_UTM)
-    pt0 = geom.GetPoint(0) # Stern
-    pt1 = geom.GetPoint(1) # Bow
-    Length = math.sqrt((pt1[0]-pt0[0])**2 + (pt1[1]-pt0[1])**2)
-    Direction = (math.atan2(pt1[0]-pt0[0], pt1[1]-pt0[1])*180/math.pi) % 360
+    pt0 = geom.GetPoint(0)  # Stern
+    pt1 = geom.GetPoint(1)  # Bow
+    Length = math.sqrt((pt1[0] - pt0[0]) ** 2 + (pt1[1] - pt0[1]) ** 2)
+    Direction = (math.atan2(pt1[0] - pt0[0], pt1[1] - pt0[1]) * 180 / math.pi) % 360
     geom.Transform(transform_UTM_To_WGS84)
 
     poly, areaM, angRad, lengthM = gT.createBoxFromLine(geom, aspectRatio,
-                                                              transformRequired=True,
-                                                              transform_WGS84_To_UTM=transform_WGS84_To_UTM,
-                                                              transform_UTM_To_WGS84=transform_UTM_To_WGS84)
+                                                        transformRequired=True,
+                                                        transform_WGS84_To_UTM=transform_WGS84_To_UTM,
+                                                        transform_UTM_To_WGS84=transform_UTM_To_WGS84)
 
-    Width = Length/aspectRatio
+    Width = Length / aspectRatio
     Aspect = aspectRatio
 
     return [poly, Length, Width, Aspect, Direction]
 
 
 def convertLabelStringToPoly(shapeFileSrc, outGeoJSon, labelType='Airplane'):
+    shapeSrc = ogr.Open(shapeFileSrc)
+    source_layer = shapeSrc.GetLayer()
+    source_srs = source_layer.GetSpatialRef()
+    # Create the output Layer
+    outDriver = ogr.GetDriverByName("geojson")
+    if os.path.exists(outGeoJSon):
+        outDriver.DeleteDataSource(outGeoJSon)
 
-        shapeSrc = ogr.Open(shapeFileSrc)
-        source_layer = shapeSrc.GetLayer()
-        source_srs = source_layer.GetSpatialRef()
-        # Create the output Layer
-        outDriver = ogr.GetDriverByName("geojson")
-        if os.path.exists(outGeoJSon):
-            outDriver.DeleteDataSource(outGeoJSon)
+    outDataSource = outDriver.CreateDataSource(outGeoJSon)
+    outLayer = outDataSource.CreateLayer("groundTruth", source_srs, geom_type=ogr.wkbPolygon)
+    # Add input Layer Fields to the output Layer
+    inLayerDefn = source_layer.GetLayerDefn()
+    for i in range(0, inLayerDefn.GetFieldCount()):
+        fieldDefn = inLayerDefn.GetFieldDefn(i)
+        outLayer.CreateField(fieldDefn)
+    outLayer.CreateField(ogr.FieldDefn("Length_m", ogr.OFTReal))
+    outLayer.CreateField(ogr.FieldDefn("Width_m", ogr.OFTReal))
+    outLayer.CreateField(ogr.FieldDefn("Aspect(L/W)", ogr.OFTReal))
+    outLayer.CreateField(ogr.FieldDefn("compassDeg", ogr.OFTReal))
 
+    outLayerDefn = outLayer.GetLayerDefn()
+    for inFeature in source_layer:
 
-        outDataSource = outDriver.CreateDataSource(outGeoJSon)
-        outLayer = outDataSource.CreateLayer("groundTruth", source_srs, geom_type=ogr.wkbPolygon)
-        # Add input Layer Fields to the output Layer
-        inLayerDefn = source_layer.GetLayerDefn()
+        outFeature = ogr.Feature(outLayerDefn)
+
         for i in range(0, inLayerDefn.GetFieldCount()):
-            fieldDefn = inLayerDefn.GetFieldDefn(i)
-            outLayer.CreateField(fieldDefn)
-        outLayer.CreateField(ogr.FieldDefn("Length_m", ogr.OFTReal))
-        outLayer.CreateField(ogr.FieldDefn("Width_m", ogr.OFTReal))
-        outLayer.CreateField(ogr.FieldDefn("Aspect(L/W)", ogr.OFTReal))
-        outLayer.CreateField(ogr.FieldDefn("compassDeg", ogr.OFTReal))
+            outFeature.SetField(inLayerDefn.GetFieldDefn(i).GetNameRef(), inFeature.GetField(i))
 
-        outLayerDefn = outLayer.GetLayerDefn()
-        for inFeature in source_layer:
+        geom = inFeature.GetGeometryRef()
+        if labelType == 'Airplane':
+            poly, Length, Width, Aspect, Direction = evaluateLineStringPlane(geom, label='Airplane')
+        elif labelType == 'Boat':
+            poly, Length, Width, Aspect, Direction = evaluateLineStringBoat(geom, label='Boat')
 
-            outFeature = ogr.Feature(outLayerDefn)
+        outFeature.SetGeometry(poly)
+        outFeature.SetField("Length_m", Length)
+        outFeature.SetField("Width_m", Width)
+        outFeature.SetField("Aspect(L/W)", Aspect)
+        outFeature.SetField("compassDeg", Direction)
 
-            for i in range(0, inLayerDefn.GetFieldCount()):
-                outFeature.SetField(inLayerDefn.GetFieldDefn(i).GetNameRef(), inFeature.GetField(i))
-
-            geom = inFeature.GetGeometryRef()
-            if labelType == 'Airplane':
-                poly, Length, Width, Aspect, Direction = evaluateLineStringPlane(geom, label='Airplane')
-            elif labelType == 'Boat':
-                poly, Length, Width, Aspect, Direction = evaluateLineStringBoat(geom, label='Boat')
-
-            outFeature.SetGeometry(poly)
-            outFeature.SetField("Length_m", Length)
-            outFeature.SetField("Width_m", Width)
-            outFeature.SetField("Aspect(L/W)", Aspect)
-            outFeature.SetField("compassDeg", Direction)
-
-            outLayer.CreateFeature(outFeature)
+        outLayer.CreateFeature(outFeature)
 
 
 def createTruthPixelLinePickle(truthLineFile, pickleLocation=''):
-    if pickleLocation=='':
+    if pickleLocation == '':
         extension = os.path.splitext(truthLineFile)[1]
         pickleLocation = truthLineFile.replace(extension, 'Pixline.p')
     if truthLineFile != '':
@@ -152,7 +148,7 @@ def createTruthPixelLinePickle(truthLineFile, pickleLocation=''):
 def createTruthPixelPolyPickle(truthPoly, pickleLocation=''):
     # returns dictionary with list of minX, maxX, minY, maxY
 
-    if pickleLocation=='':
+    if pickleLocation == '':
         extension = os.path.splitext(truthPoly)[1]
         pickleLocation = truthPoly.replace(extension, 'PixPoly.p')
     if truthPoly != '':
@@ -167,12 +163,11 @@ def createTruthPixelPolyPickle(truthPoly, pickleLocation=''):
             envList.append(env)
 
         envArray = np.asarray(envList)
-        envelopeData = {'minX': envArray[:,0],
-                        'maxX': envArray[:,1],
-                        'minY': envArray[:,2],
-                        'maxY': envArray[:,3]
+        envelopeData = {'minX': envArray[:, 0],
+                        'maxX': envArray[:, 1],
+                        'minY': envArray[:, 2],
+                        'maxY': envArray[:, 3]
                         }
-
 
         with open(pickleLocation, 'wb') as f:
             pickle.dump(envelopeData, f)
@@ -180,7 +175,6 @@ def createTruthPixelPolyPickle(truthPoly, pickleLocation=''):
 
 
 def createNPPixArrayDist(rasterSrc, vectorSrc, npDistFileName='', units='pixels'):
-
     ## open source vector file that truth data
     source_ds = ogr.Open(vectorSrc)
     source_layer = source_ds.GetLayer()
@@ -192,12 +186,12 @@ def createNPPixArrayDist(rasterSrc, vectorSrc, npDistFileName='', units='pixels'
     rows = srcRas_ds.RasterYSize
     noDataValue = 0
 
-    if units=='meters':
+    if units == 'meters':
         geoTrans, poly, ulX, ulY, lrX, lrY = gT.getRasterExtent(srcRas_ds)
         transform_WGS84_To_UTM, transform_UTM_To_WGS84, utm_cs = gT.createUTMTransform(poly)
         line = ogr.Geometry(ogr.wkbLineString)
         line.AddPoint(geoTrans[0], geoTrans[3])
-        line.AddPoint(geoTrans[0]+geoTrans[1], geoTrans[3])
+        line.AddPoint(geoTrans[0] + geoTrans[1], geoTrans[3])
 
         line.Transform(transform_WGS84_To_UTM)
         metersIndex = line.Length()
@@ -239,7 +233,7 @@ def createNPPixArrayDist(rasterSrc, vectorSrc, npDistFileName='', units='pixels'
     proxOut = gdalnumeric.BandReadAsArray(proxBand)
 
     proxTotal = proxIn.astype(float) - proxOut.astype(float)
-    proxTotal = proxTotal*metersIndex
+    proxTotal = proxTotal * metersIndex
 
     if npDistFileName != '':
         np.save(npDistFileName, proxTotal)
@@ -250,7 +244,6 @@ def createNPPixArrayDist(rasterSrc, vectorSrc, npDistFileName='', units='pixels'
 def createGeoJSONFromRaster(geoJsonFileName, array2d, geom, proj,
                             layerName="BuildingID",
                             fieldName="BuildingID"):
-
     memdrv = gdal.GetDriverByName('MEM')
     src_ds = memdrv.Create('', array2d.shape[1], array2d.shape[0], 1)
     src_ds.SetGeoTransform(geom)
@@ -275,8 +268,6 @@ def createGeoJSONFromRaster(geoJsonFileName, array2d, geom, proj,
 def createCSVSummaryFile(chipSummaryList, outputFileName, rasterChipDirectory='', replaceImageID='',
                          createProposalsFile=False,
                          pixPrecision=2):
-
-
     with open(outputFileName, 'wb') as csvfile:
         writerTotal = csv.writer(csvfile, delimiter=',', lineterminator='\n')
         if createProposalsFile:
@@ -288,7 +279,7 @@ def createCSVSummaryFile(chipSummaryList, outputFileName, rasterChipDirectory=''
             chipName = chipSummary['chipName']
             print(chipName)
             geoVectorName = chipSummary['geoVectorName']
-            #pixVectorName = chipSummary['pixVectorName']
+            # pixVectorName = chipSummary['pixVectorName']
             buildingList = gT.convert_wgs84geojson_to_pixgeojson(geoVectorName,
                                                                  os.path.join(rasterChipDirectory, chipName),
                                                                  pixPrecision=pixPrecision)
@@ -301,12 +292,12 @@ def createCSVSummaryFile(chipSummaryList, outputFileName, rasterChipDirectory=''
                                               building['polyPix'], 1])
                     else:
                         writerTotal.writerow([imageId, building['BuildingId'],
-                                          building['polyPix'], building['polyGeo']])
+                                              building['polyPix'], building['polyGeo']])
             else:
                 imageId = os.path.splitext(os.path.basename(chipName))[0].replace(replaceImageID, "")
                 if createProposalsFile:
                     writerTotal.writerow([imageId, -1,
-                                      'POLYGON EMPTY', 1])
+                                          'POLYGON EMPTY', 1])
                 else:
                     writerTotal.writerow([imageId, -1,
                                           'POLYGON EMPTY', 'POLYGON EMPTY'])
@@ -315,15 +306,12 @@ def createCSVSummaryFile(chipSummaryList, outputFileName, rasterChipDirectory=''
 def createCSVSummaryFileFromJsonList(geoJsonList, outputFileName, chipnameList=[],
                                      input='Geo',
                                      replaceImageID=''):
-
     # Note will not Create Pixle inputs.  No current input for Raster
     if chipnameList:
         pass
     else:
         for geoJson in geoJsonList:
             chipnameList.append(os.path.basename(os.path.splitext(geoJson)[0]))
-
-
 
     with open(outputFileName, 'wb') as csvfile:
         writerTotal = csv.writer(csvfile, delimiter=',', lineterminator='\n')
@@ -336,15 +324,14 @@ def createCSVSummaryFileFromJsonList(geoJsonList, outputFileName, chipnameList=[
                                                                      image_id=chipName)
                 if len(buildingList) > 0:
                     for building in buildingList:
-                        imageId = os.path.basename(building['ImageId']).replace(replaceImageID,"")
+                        imageId = os.path.basename(building['ImageId']).replace(replaceImageID, "")
                         writerTotal.writerow([imageId, building['BuildingId'],
                                               building['polyPix'], building['polyGeo']])
                 else:
-                    imageId = os.path.splitext(os.path.basename(chipName))[0].replace(replaceImageID,"")
-                    writerTotal.writerow([imageId, -1,'"POLYGON EMPTY"', '"POLYGON EMPTY"'])
+                    imageId = os.path.splitext(os.path.basename(chipName))[0].replace(replaceImageID, "")
+                    writerTotal.writerow([imageId, -1, '"POLYGON EMPTY"', '"POLYGON EMPTY"'])
             except:
                 pass
-
 
 
 def createCSVSummaryFromDirectory(geoJsonDirectory, rasterFileDirectoryList,
@@ -354,13 +341,12 @@ def createCSVSummaryFromDirectory(geoJsonDirectory, rasterFileDirectoryList,
     if outputDirectory == '':
         outputDirectory == geoJsonDirectory
     outputbaseName = "AOI_{}_{}_polygons_solution".format(aoi_num, aoi_name)
-    #rasterFileDirectoryList = [
+    # rasterFileDirectoryList = [
     #    ['/usr/local/share/data/AOI_1_RIO/processed2/3band', '3band', '*.tif'],
     #    ['/usr/local/share/data/AOI_1_RIO/processed2/8band', '8band', '*.tif']
     #    ]
 
     geoJsonList = glob.glob(os.path.join(geoJsonDirectory, '*.geojson'))
-
 
     jsonList = []
     chipSummaryList8band = []
@@ -371,31 +357,27 @@ def createCSVSummaryFromDirectory(geoJsonDirectory, rasterFileDirectoryList,
     for idx, rasterFile in enumerate(rasterFileDirectoryList):
         chipsSummaryList[idx] = []
 
-
     for imageId in geoJsonList:
         imageId = os.path.basename(imageId)
 
         for idx, rasterFile in enumerate(rasterFileDirectoryList):
             bandName = imageId.replace('.geojson', '.tif')
-            bandName = bandName.replace('Geo_', rasterFile[1]+'_')
+            bandName = bandName.replace('Geo_', rasterFile[1] + '_')
             print imageId
             print os.path.join(rasterFile[0], bandName)
             chipSummaryBand = {'chipName': os.path.join(rasterFile[0], bandName),
-                                'geoVectorName': os.path.join(geoJsonDirectory, imageId),
-                                'imageId': os.path.splitext(imageId)[0]}
+                               'geoVectorName': os.path.join(geoJsonDirectory, imageId),
+                               'imageId': os.path.splitext(imageId)[0]}
 
             chipsSummaryList[idx].append(chipSummaryBand)
-
 
     print "starting"
     for idx, rasterFile in enumerate(rasterFileDirectoryList):
         createCSVSummaryFile(chipsSummaryList[idx], os.path.join(outputDirectory,
-                                                                 outputbaseName+'_'+rasterFile[1]+'.csv'),
-                            replaceImageID=rasterFile[1]+'_')
-
+                                                                 outputbaseName + '_' + rasterFile[1] + '.csv'),
+                             replaceImageID=rasterFile[1] + '_')
 
     print "finished"
-
 
 
 def createRasterFromGeoJson(srcGeoJson, srcRasterFileName, outRasterFileName):
@@ -405,9 +387,9 @@ def createRasterFromGeoJson(srcGeoJson, srcRasterFileName, outRasterFileName):
 
     srcRaster = gdal.Open(srcRasterFileName)
 
-
     # Create the destination data source
-    target_ds = gdal.GetDriverByName('GTiff').Create(outRasterFileName, srcRaster.RasterXSize, srcRaster.RasterYSize, 1, gdal.GDT_Byte)
+    target_ds = gdal.GetDriverByName('GTiff').Create(outRasterFileName, srcRaster.RasterXSize, srcRaster.RasterYSize, 1,
+                                                     gdal.GDT_Byte)
     target_ds.SetGeoTransform(srcRaster.GetGeoTransform())
     target_ds.SetProjection(srcRaster.GetProjection())
     band = target_ds.GetRasterBand(1)
@@ -416,8 +398,6 @@ def createRasterFromGeoJson(srcGeoJson, srcRasterFileName, outRasterFileName):
     # Rasterize
     gdal.RasterizeLayer(target_ds, [1], source_layer, burn_values=[1])
     band.FlushCache()
-
-
 
 
 def createAOIName(AOI_Name, AOI_Num,
@@ -434,15 +414,14 @@ def createAOIName(AOI_Name, AOI_Num,
                   createSummaryCSVChallenge=True,
                   csvLabel='All',
                   featureName='Buildings'):
-
     srcImageryList = []
     if clipImageryToAOI:
-
 
         for srcImagery in srcImageryListOrig:
 
             print(srcImagery)
-            AOI_HighResMosaicName = os.path.join(outputDirectory, 'AOI_{}_{}_{}.vrt'.format(AOI_Num, AOI_Name, srcImagery[1]))
+            AOI_HighResMosaicName = os.path.join(outputDirectory,
+                                                 'AOI_{}_{}_{}.vrt'.format(AOI_Num, AOI_Name, srcImagery[1]))
             if vrtMosaic:
                 AOI_HighResMosaicClipName = AOI_HighResMosaicName.replace('.vrt', 'clipped.vrt')
             else:
@@ -453,9 +432,9 @@ def createAOIName(AOI_Name, AOI_Num,
 
             if vrtMosaic:
                 command = 'gdalwarp -of VRT ' + \
-                        '-cutline ' + srcVectorAOIFile + ' ' + \
-                        srcImagery[0] + ' ' + \
-                        AOI_HighResMosaicClipName
+                          '-cutline ' + srcVectorAOIFile + ' ' + \
+                          srcImagery[0] + ' ' + \
+                          AOI_HighResMosaicClipName
             else:
                 command = 'gdalwarp ' + \
                           '-cutline ' + srcVectorAOIFile + ' ' + \
@@ -476,18 +455,16 @@ def createAOIName(AOI_Name, AOI_Num,
         #                        ]
     chipSummaryList = gT.cutChipFromMosaic(srcImageryList, srcVectorFileList, outlineSrc=srcVectorAOIFile,
                                            outputDirectory=outputDirectory, outputPrefix='',
-                                           clipSizeMX=windowSizeMeters, clipSizeMY=windowSizeMeters, clipOverlap=clipOverlap,
+                                           clipSizeMX=windowSizeMeters, clipSizeMY=windowSizeMeters,
+                                           clipOverlap=clipOverlap,
                                            minpartialPerc=minpartialPerc, createPix=createPix,
                                            baseName='AOI_{}_{}'.format(AOI_Num, AOI_Name),
                                            imgIdStart=1)
 
-
-    outputCSVSummaryName = 'AOI_{}_{}_{}_{}_solutions.csv'.format(AOI_Num, AOI_Name, csvLabel,featureName)
+    outputCSVSummaryName = 'AOI_{}_{}_{}_{}_solutions.csv'.format(AOI_Num, AOI_Name, csvLabel, featureName)
     createCSVSummaryFile(chipSummaryList, outputCSVSummaryName, rasterChipDirectory='', replaceImageID='',
                          createProposalsFile=False,
                          pixPrecision=2)
-
-
 
 
 def prettify(elem):
@@ -498,26 +475,25 @@ def prettify(elem):
     return reparsed.toprettyxml(indent="  ")
 
 
-
 def geoJsonToPASCALVOC2012(xmlFileName, geoJson, rasterImageName, im_id='',
-                           dataset ='SpaceNet',
+                           dataset='SpaceNet',
                            folder_name='spacenet',
-                           annotationStyle = 'PASCAL VOC2012',
+                           annotationStyle='PASCAL VOC2012',
                            segment=True,
                            bufferSizePix=2.5,
                            convertTo8Bit=True,
                            outputPixType='Byte',
                            outputFormat='GTiff',
                            bboxResize=1.0):
-
     print("creating {}".format(xmlFileName))
-    buildingList = gT.convert_wgs84geojson_to_pixgeojson(geoJson, rasterImageName, image_id=[], pixelgeojson=[], only_polygons=True,
-                                       breakMultiPolygonGeo=True, pixPrecision=2)
+    buildingList = gT.convert_wgs84geojson_to_pixgeojson(geoJson, rasterImageName, image_id=[], pixelgeojson=[],
+                                                         only_polygons=True,
+                                                         breakMultiPolygonGeo=True, pixPrecision=2)
     #                        buildinglist.append({'ImageId': image_id,
-                                             #'BuildingId': building_id,
-                                             #'polyGeo': ogr.CreateGeometryFromWkt(geom.ExportToWkt()),
-                                             #'polyPix': ogr.CreateGeometryFromWkt('POLYGON EMPTY')
-                                             #})
+    # 'BuildingId': building_id,
+    # 'polyGeo': ogr.CreateGeometryFromWkt(geom.ExportToWkt()),
+    # 'polyPix': ogr.CreateGeometryFromWkt('POLYGON EMPTY')
+    # })
 
 
 
@@ -529,8 +505,8 @@ def geoJsonToPASCALVOC2012(xmlFileName, geoJson, rasterImageName, im_id='',
         cmd = ['gdal_translate', '-ot', outputPixType, '-of', outputFormat, '-co', '"PHOTOMETRIC=rgb"']
         scaleList = []
         for bandId in range(srcRaster.RasterCount):
-            bandId = bandId+1
-            band=srcRaster.GetRasterBand(bandId)
+            bandId = bandId + 1
+            band = srcRaster.GetRasterBand(bandId)
             min = band.GetMinimum()
             max = band.GetMaximum()
 
@@ -554,7 +530,6 @@ def geoJsonToPASCALVOC2012(xmlFileName, geoJson, rasterImageName, im_id='',
         cmd.append(outputRaster)
         print(cmd)
         subprocess.call(cmd)
-
 
     if segment:
         segmented = 1  # 1=True, 0 = False
@@ -589,16 +564,16 @@ def geoJsonToPASCALVOC2012(xmlFileName, geoJson, rasterImageName, im_id='',
         objectDifficulty = 0  # 0 Easy - 3 Hard
 
         env = building['polyPix'].GetEnvelope()
-        xmin=env[0]
-        ymin=env[2]
-        xmax=env[1]
-        ymax=env[3]
+        xmin = env[0]
+        ymin = env[2]
+        xmax = env[1]
+        ymax = env[3]
 
         if bboxResize != 1.0:
-            xCenter = (xmin+xmax)/2
-            yCenter = (ymin+ymax)/2
-            bboxNewHalfHeight = ((ymax-ymin)/2)*bboxResize
-            bboxNewHalfWidth  = ((ymax - ymin) / 2)*bboxResize
+            xCenter = (xmin + xmax) / 2
+            yCenter = (ymin + ymax) / 2
+            bboxNewHalfHeight = ((ymax - ymin) / 2) * bboxResize
+            bboxNewHalfWidth = ((ymax - ymin) / 2) * bboxResize
             xmin = xCenter - bboxNewHalfWidth
             xmax = xCenter + bboxNewHalfWidth
             ymin = yCenter - bboxNewHalfHeight
@@ -622,7 +597,6 @@ def geoJsonToPASCALVOC2012(xmlFileName, geoJson, rasterImageName, im_id='',
     with open(xmlFileName, 'w') as f:
         f.write(prettify(top))
 
-
     print('creating segmentation')
     if segment:
         NoData_value = -9999
@@ -631,7 +605,7 @@ def geoJsonToPASCALVOC2012(xmlFileName, geoJson, rasterImageName, im_id='',
         source_layer = source_ds.GetLayer()
         srs = source_layer.GetSpatialRef()
         memDriver = ogr.GetDriverByName('MEMORY')
-        outerBuffer=memDriver.CreateDataSource('outer')
+        outerBuffer = memDriver.CreateDataSource('outer')
         outerBufferLayer = outerBuffer.CreateLayer("test", srs, geom_type=ogr.wkbPolygon)
         innerBuffer = memDriver.CreateDataSource('inner')
         innerBufferLayer = innerBuffer.CreateLayer("test2", srs, geom_type=ogr.wkbPolygon)
@@ -640,11 +614,11 @@ def geoJsonToPASCALVOC2012(xmlFileName, geoJson, rasterImageName, im_id='',
         innerBufferLayer.CreateField(idField)
 
         featureDefn = innerBufferLayer.GetLayerDefn()
-        bufferDist = srcRaster.GetGeoTransform()[1]*bufferSizePix
+        bufferDist = srcRaster.GetGeoTransform()[1] * bufferSizePix
         for idx, feature in enumerate(source_layer):
             ingeom = feature.GetGeometryRef()
             geomBufferOut = ingeom.Buffer(bufferDist)
-            geomBufferIn  = ingeom.Buffer(-bufferDist)
+            geomBufferIn = ingeom.Buffer(-bufferDist)
             print(geomBufferIn.ExportToWkt())
             print(geomBufferIn.IsEmpty())
             print(geomBufferIn.IsSimple())
@@ -663,11 +637,10 @@ def geoJsonToPASCALVOC2012(xmlFileName, geoJson, rasterImageName, im_id='',
                 outBufFeature = None
                 inBufFeature = None
 
-
-
         print('writing GTIFF sgcls')
         print('rasterToWrite = {}'.format(xmlFileName.replace('.xml', 'segcls.tif')))
-        target_ds = gdal.GetDriverByName('GTiff').Create(xmlFileName.replace('.xml', 'segcls.tif'), srcRaster.RasterXSize, srcRaster.RasterYSize, 1, gdal.GDT_Byte)
+        target_ds = gdal.GetDriverByName('GTiff').Create(xmlFileName.replace('.xml', 'segcls.tif'),
+                                                         srcRaster.RasterXSize, srcRaster.RasterYSize, 1, gdal.GDT_Byte)
         print('setTransform')
         target_ds.SetGeoTransform(srcRaster.GetGeoTransform())
         print('setProjection')
@@ -708,35 +681,37 @@ def geoJsonToPASCALVOC2012(xmlFileName, geoJson, rasterImageName, im_id='',
         im.save(xmlFileName.replace('.xml', 'segobj.png'))
 
     entry = {'rasterFileName': outputRaster,
-                 'geoJsonFileName': geoJson,
-                 'annotationName': xmlFileName,
-                 'width': srcRaster.RasterXSize,
-                 'height': srcRaster.RasterYSize,
-                 'depth' : srcRaster.RasterCount,
-                 'basename': os.path.splitext(os.path.basename(rasterImageName))[0]
-                 }
+             'geoJsonFileName': geoJson,
+             'annotationName': xmlFileName,
+             'width': srcRaster.RasterXSize,
+             'height': srcRaster.RasterYSize,
+             'depth': srcRaster.RasterCount,
+             'basename': os.path.splitext(os.path.basename(rasterImageName))[0]
+             }
 
     return entry
 
+
 def convertPixDimensionToPercent(size, box):
     '''Input = image size: (w,h), box: [x0, x1, y0, y1]'''
-    dw = 1./size[0]
-    dh = 1./size[1]
-    xmid = (box[0] + box[1])/2.0
-    ymid = (box[2] + box[3])/2.0
+    dw = 1. / size[0]
+    dh = 1. / size[1]
+    xmid = (box[0] + box[1]) / 2.0
+    ymid = (box[2] + box[3]) / 2.0
     w0 = box[1] - box[0]
     h0 = box[3] - box[2]
-    x = xmid*dw
-    y = ymid*dh
-    w = w0*dw
-    h = h0*dh
+    x = xmid * dw
+    y = ymid * dh
+    w = w0 * dw
+    h = h0 * dh
 
-    return (x,y,w,h)
+    return (x, y, w, h)
+
 
 def geoJsonToDARKNET(xmlFileName, geoJson, rasterImageName, im_id='',
-                     dataset ='SpaceNet',
+                     dataset='SpaceNet',
                      folder_name='spacenet',
-                     annotationStyle = 'DARKNET',
+                     annotationStyle='DARKNET',
                      segment=True,
                      bufferSizePix=2.5,
                      convertTo8Bit=True,
@@ -746,13 +721,14 @@ def geoJsonToDARKNET(xmlFileName, geoJson, rasterImageName, im_id='',
     xmlFileName = xmlFileName.replace(".xml", ".txt")
     print("creating {}".format(xmlFileName))
 
-    buildingList = gT.convert_wgs84geojson_to_pixgeojson(geoJson, rasterImageName, image_id=[], pixelgeojson=[], only_polygons=True,
-                                       breakMultiPolygonGeo=True, pixPrecision=2)
+    buildingList = gT.convert_wgs84geojson_to_pixgeojson(geoJson, rasterImageName, image_id=[], pixelgeojson=[],
+                                                         only_polygons=True,
+                                                         breakMultiPolygonGeo=True, pixPrecision=2)
     #                        buildinglist.append({'ImageId': image_id,
-                                             #'BuildingId': building_id,
-                                             #'polyGeo': ogr.CreateGeometryFromWkt(geom.ExportToWkt()),
-                                             #'polyPix': ogr.CreateGeometryFromWkt('POLYGON EMPTY')
-                                             #})
+    # 'BuildingId': building_id,
+    # 'polyGeo': ogr.CreateGeometryFromWkt(geom.ExportToWkt()),
+    # 'polyPix': ogr.CreateGeometryFromWkt('POLYGON EMPTY')
+    # })
 
 
     srcRaster = gdal.Open(rasterImageName)
@@ -761,8 +737,8 @@ def geoJsonToDARKNET(xmlFileName, geoJson, rasterImageName, im_id='',
         cmd = ['gdal_translate', '-ot', outputPixType, '-of', outputFormat, '-co', 'PHOTOMETRIC=rgb']
         scaleList = []
         for bandId in range(srcRaster.RasterCount):
-            bandId = bandId+1
-            band=srcRaster.GetRasterBand(bandId)
+            bandId = bandId + 1
+            band = srcRaster.GetRasterBand(bandId)
             min = band.GetMinimum()
             max = band.GetMaximum()
 
@@ -790,7 +766,6 @@ def geoJsonToDARKNET(xmlFileName, geoJson, rasterImageName, im_id='',
 
         for building in buildingList:
 
-
             # Get Envelope returns a tuple (minX, maxX, minY, maxY)
 
             boxDim = building['polyPix'].GetEnvelope()
@@ -814,12 +789,12 @@ def geoJsonToDARKNET(xmlFileName, geoJson, rasterImageName, im_id='',
             rasterSize = (srcRaster.RasterXSize, srcRaster.RasterYSize)
 
             lineOutput = convertPixDimensionToPercent(rasterSize, boxDim)
-            classNum=0
+            classNum = 0
             f.write('{} {} {} {} {}\n'.format(classNum,
-                                             lineOutput[0],
-                                             lineOutput[1],
-                                             lineOutput[2],
-                                             lineOutput[3])
+                                              lineOutput[0],
+                                              lineOutput[1],
+                                              lineOutput[2],
+                                              lineOutput[3])
                     )
 
     entry = {'rasterFileName': outputRaster,
@@ -827,14 +802,14 @@ def geoJsonToDARKNET(xmlFileName, geoJson, rasterImageName, im_id='',
              'annotationName': xmlFileName,
              'width': srcRaster.RasterXSize,
              'height': srcRaster.RasterYSize,
-             'depth' : srcRaster.RasterCount,
+             'depth': srcRaster.RasterCount,
              'basename': os.path.splitext(os.path.basename(rasterImageName))[0]
              }
 
     return entry
 
-def createDistanceTransform(rasterSrc, vectorSrc, npDistFileName='', units='pixels'):
 
+def createDistanceTransform(rasterSrc, vectorSrc, npDistFileName='', units='pixels'):
     ## open source vector file that truth data
     source_ds = ogr.Open(vectorSrc)
     source_layer = source_ds.GetLayer()
@@ -846,12 +821,12 @@ def createDistanceTransform(rasterSrc, vectorSrc, npDistFileName='', units='pixe
     rows = srcRas_ds.RasterYSize
     noDataValue = 0
 
-    if units=='meters':
+    if units == 'meters':
         geoTrans, poly, ulX, ulY, lrX, lrY = gT.getRasterExtent(srcRas_ds)
         transform_WGS84_To_UTM, transform_UTM_To_WGS84, utm_cs = gT.createUTMTransform(poly)
         line = ogr.Geometry(ogr.wkbLineString)
         line.AddPoint(geoTrans[0], geoTrans[3])
-        line.AddPoint(geoTrans[0]+geoTrans[1], geoTrans[3])
+        line.AddPoint(geoTrans[0] + geoTrans[1], geoTrans[3])
 
         line.Transform(transform_WGS84_To_UTM)
         metersIndex = line.Length()
@@ -876,7 +851,7 @@ def createDistanceTransform(rasterSrc, vectorSrc, npDistFileName='', units='pixe
     proxBand = prox_ds.GetRasterBand(1)
     proxBand.SetNoDataValue(noDataValue)
     options = ['NODATA=0']
-    
+
     ##compute distance to non-zero pixel values and scrBand and store in proxBand
     gdal.ComputeProximity(srcBand, proxBand, options)
 
@@ -887,16 +862,16 @@ def createDistanceTransform(rasterSrc, vectorSrc, npDistFileName='', units='pixe
     proxInBand = proxIn_ds.GetRasterBand(1)
     proxInBand.SetNoDataValue(noDataValue)
     options = ['NODATA=0', 'VALUES=0']
-    
+
     ##compute distance to zero pixel values and scrBand and store in proxInBand
     gdal.ComputeProximity(srcBand, proxInBand, options)
 
     proxIn = gdalnumeric.BandReadAsArray(proxInBand)
     proxOut = gdalnumeric.BandReadAsArray(proxBand)
- 
+
     ##distance tranform is the distance to zero pixel values minus distance to non-zero pixel values
     proxTotal = proxIn.astype(float) - proxOut.astype(float)
-    proxTotal = proxTotal*metersIndex
+    proxTotal = proxTotal * metersIndex
 
     if npDistFileName != '':
         np.save(npDistFileName, proxTotal)
@@ -913,7 +888,7 @@ def createClassSegmentation(rasterSrc, vectorSrc, npDistFileName='', units='pixe
 
 def createClassBoundaries(rasterSrc, vectorSrc, npDistFileName='', units='pixels'):
     dist_trans = createDistanceTransform(rasterSrc, vectorSrc, npDistFileName='', units='pixels')
-    #From distance transform to boundary
+    # From distance transform to boundary
     dist_trans[dist_trans > 1.0] = 255
     dist_trans[dist_trans < -1.0] = 255
     dist_trans[dist_trans != 255] = 1
@@ -925,30 +900,30 @@ def createClassBoundaries(rasterSrc, vectorSrc, npDistFileName='', units='pixels
 def createClassCategoriesPresent(vectorSrc):
     with open(vectorSrc) as my_file:
         data = json.load(my_file)
-    if(len(data['features']) == 0):
-       return np.array([],dtype=np.uint8)
+    if (len(data['features']) == 0):
+        return np.array([], dtype=np.uint8)
     else:
-       return np.array([1],dtype=np.uint8)
+        return np.array([1], dtype=np.uint8)
+
 
 def createDistanceTransformByFeatureIndex(feature_index, rasterSrc, vectorSrc, npDistFileName='', units='pixels'):
     ## open source vector file that truth data
     source_ds = ogr.Open(vectorSrc)
     source_layer = source_ds.GetLayer()
-    
-    #Define feature
+
+    # Define feature
     my_feature = source_layer[feature_index]
-    
-    #Spatial Reference
+
+    # Spatial Reference
     srs = source_layer.GetSpatialRef()
-    
-    #Create feature Layer
+
+    # Create feature Layer
     outDriver = ogr.GetDriverByName('MEMORY')
     outDataSource = outDriver.CreateDataSource('memData')
     Feature_Layer = outDataSource.CreateLayer("this_feature", srs, geom_type=ogr.wkbPolygon)
-    
-    #Add feature to layer
+
+    # Add feature to layer
     Feature_Layer.CreateFeature(my_feature)
-    
 
     ## extract data from src Raster File to be emulated
     ## open raster file that is to be emulated
@@ -993,56 +968,63 @@ def createDistanceTransformByFeatureIndex(feature_index, rasterSrc, vectorSrc, n
     proxOut = gdalnumeric.BandReadAsArray(proxBand)
 
     proxTotal = proxIn.astype(float) - proxOut.astype(float)
-    proxTotal = proxTotal*metersIndex
+    proxTotal = proxTotal * metersIndex
 
     if npDistFileName != '':
         np.save(npDistFileName, proxTotal)
-        
+
     return proxTotal
 
+
 def createSegmentationByFeatureIndex(feature_index, rasterSrc, vectorSrc, npDistFileName='', units='pixels'):
-    dist_trans_by_feature = createDistanceTransformByFeatureIndex(feature_index, rasterSrc, vectorSrc, npDistFileName='', units='pixels')
+    dist_trans_by_feature = createDistanceTransformByFeatureIndex(feature_index, rasterSrc, vectorSrc,
+                                                                  npDistFileName='', units='pixels')
     dist_trans_by_feature[dist_trans_by_feature > 0] = feature_index + 1
-    dist_trans_by_feature[dist_trans_by_feature < 0] = 0  
+    dist_trans_by_feature[dist_trans_by_feature < 0] = 0
     return dist_trans_by_feature.astype(np.uint8)
+
 
 def createInstanceSegmentation(rasterSrc, vectorSrc):
     json_data = open(vectorSrc)
     data = json.load(json_data)
     num_features = len(data['features'])
-    
+
     cell_array = np.zeros((num_features,), dtype=np.object)
     for i in range(num_features):
         cell_array[i] = createSegmentationByFeatureIndex(i, rasterSrc, vectorSrc, npDistFileName='', units='pixels')
     return cell_array
 
+
 def createBoundariesByFeatureIndex(feature_index, rasterSrc, vectorSrc, npDistFileName='', units='pixels'):
-    dist_trans_by_feature = createDistanceTransformByFeatureIndex(feature_index, rasterSrc, vectorSrc, npDistFileName='', units='pixels')
+    dist_trans_by_feature = createDistanceTransformByFeatureIndex(feature_index, rasterSrc, vectorSrc,
+                                                                  npDistFileName='', units='pixels')
     dist_trans_by_feature[dist_trans_by_feature > 1.0] = 255
     dist_trans_by_feature[dist_trans_by_feature < -1.0] = 255
     dist_trans_by_feature[dist_trans_by_feature != 255] = 1
     dist_trans_by_feature[dist_trans_by_feature == 255] = 0
     return dist_trans_by_feature.astype(np.uint8)
 
+
 def createInstanceBoundaries(rasterSrc, vectorSrc):
     json_data = open(vectorSrc)
     data = json.load(json_data)
     num_features = len(data['features'])
-    
+
     cell_array = np.zeros((num_features,), dtype=np.object)
     for i in range(num_features):
-        full_boundary_matrix = createBoundariesByFeatureIndex(i, rasterSrc, vectorSrc, npDistFileName='', units='pixels')
+        full_boundary_matrix = createBoundariesByFeatureIndex(i, rasterSrc, vectorSrc, npDistFileName='',
+                                                              units='pixels')
         cell_array[i] = csr_matrix(full_boundary_matrix)
     return cell_array
+
 
 def createInstanceCategories(vectorSrc):
     with open(vectorSrc) as my_file:
         data = json.load(my_file)
-    if(len(data['features']) == 0):
-       return np.array([],dtype=np.uint8)
+    if (len(data['features']) == 0):
+        return np.array([], dtype=np.uint8)
     else:
-       return np.ones(len(data['features']),dtype=np.uint8).reshape((len(data['features']), 1))
-
+        return np.ones(len(data['features']), dtype=np.uint8).reshape((len(data['features']), 1))
 
 
 def geoJsonToSBD(annotationName_cls, annotationName_inst, geoJson, rasterSource,
@@ -1054,58 +1036,55 @@ def geoJsonToSBD(annotationName_cls, annotationName_inst, geoJson, rasterSource,
                  outputPixType='',
                  outputFormat=''
                  ):
-
-    #Print raster file name
+    # Print raster file name
     my_raster_source = rasterSource
-    print("Raster directory : ",my_raster_source)
+    print("Raster directory : ", my_raster_source)
     srcRaster = gdal.Open(my_raster_source)
 
-    
     my_vector_source = geoJson
-    print("Vector directory : ",my_vector_source)
+    print("Vector directory : ", my_vector_source)
 
-    
-    #Call main functions to create label datafor cls
+    # Call main functions to create label datafor cls
     my_cls_segmentation = createClassSegmentation(my_raster_source, my_vector_source, npDistFileName='', units='pixels')
-    my_cls_boundaries =  createClassBoundaries(my_raster_source, my_vector_source, npDistFileName='', units='pixels')
+    my_cls_boundaries = createClassBoundaries(my_raster_source, my_vector_source, npDistFileName='', units='pixels')
     my_cls_categories = createClassCategoriesPresent(my_vector_source)
 
-    #Call main functions to create label datafor inst
+    # Call main functions to create label datafor inst
     my_inst_segmentation = createInstanceSegmentation(my_raster_source, my_vector_source)
     my_inst_boundaries = createInstanceBoundaries(my_raster_source, my_vector_source)
     my_inst_categories = createInstanceCategories(my_vector_source)
 
-    #Wraps for cls struct
+    # Wraps for cls struct
     cls_boundaries_wrap = np.array([my_cls_boundaries])
     cls_categories_wrap = my_cls_categories
 
-    #Wraps for inst struct
+    # Wraps for inst struct
     inst_boundaries_wrap = np.array([my_inst_boundaries])
     inst_categories_wrap = my_inst_categories
 
-    #Create a class struct
-    GTcls = {'Segmentation': my_cls_segmentation , 'Boundaries': cls_boundaries_wrap, 'CategoriesPresent': cls_categories_wrap}
+    # Create a class struct
+    GTcls = {'Segmentation': my_cls_segmentation, 'Boundaries': cls_boundaries_wrap,
+             'CategoriesPresent': cls_categories_wrap}
 
+    # Create the instance struct
+    GTinst = {'Segmentation': my_inst_segmentation, 'Boundaries': inst_boundaries_wrap,
+              'Categories': inst_categories_wrap}
 
-    #Create the instance struct
-    GTinst = {'Segmentation': my_inst_segmentation , 'Boundaries': inst_boundaries_wrap, 'Categories': inst_categories_wrap}
+    # Save the files
+    scipy.io.savemat(annotationName_cls, {'GTcls': GTcls})
+    scipy.io.savemat(annotationName_inst, {'GTinst': GTinst})
 
-    #Save the files
-    scipy.io.savemat(annotationName_cls,{'GTcls': GTcls})
-    scipy.io.savemat(annotationName_inst,{'GTinst': GTinst})
-
-    print("Done with "+str())
+    print("Done with " + str())
 
     entry = {'rasterFileName': my_raster_source,
              'geoJsonFileName': geoJson,
-             'annotationName' : annotationName_cls,
+             'annotationName': annotationName_cls,
              'annotationName_cls': annotationName_cls,
-             'annotationName_inst':annotationName_inst,
+             'annotationName_inst': annotationName_inst,
              'width': srcRaster.RasterXSize,
              'height': srcRaster.RasterYSize,
-             'depth' : srcRaster.RasterCount,
+             'depth': srcRaster.RasterCount,
              'basename': os.path.splitext(os.path.basename(my_raster_source))[0]
              }
 
     return entry
-

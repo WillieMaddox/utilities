@@ -4,6 +4,7 @@ import os
 import csv
 import subprocess
 import math
+
 try:
     import rtree
 except:
@@ -25,12 +26,14 @@ def import_summary_geojson(geojsonfilename, removeNoBuildings=True):
         if poly:
             if removeNoBuildings:
                 if feature.GetField('BuildingId') != -1:
-                    buildingList.append({'ImageId': feature.GetField('ImageId'), 'BuildingId': feature.GetField('BuildingId'),
-                                  'poly': feature.GetGeometryRef().Clone()})
+                    buildingList.append(
+                        {'ImageId': feature.GetField('ImageId'), 'BuildingId': feature.GetField('BuildingId'),
+                         'poly': feature.GetGeometryRef().Clone()})
             else:
 
-                buildingList.append({'ImageId': feature.GetField('ImageId'), 'BuildingId': feature.GetField('BuildingId'),
-                              'poly': feature.GetGeometryRef().Clone()})
+                buildingList.append(
+                    {'ImageId': feature.GetField('ImageId'), 'BuildingId': feature.GetField('BuildingId'),
+                     'poly': feature.GetGeometryRef().Clone()})
 
     return buildingList
 
@@ -38,7 +41,7 @@ def import_summary_geojson(geojsonfilename, removeNoBuildings=True):
 def import_chip_geojson(geojsonfilename, ImageId=''):
     # driver = ogr.GetDriverByName('geojson')
     datasource = ogr.Open(geojsonfilename, 0)
-    if ImageId=='':
+    if ImageId == '':
         ImageId = geojsonfilename
     layer = datasource.GetLayer()
     print(layer.GetFeatureCount())
@@ -58,25 +61,23 @@ def import_chip_geojson(geojsonfilename, ImageId=''):
 
 
 def mergePolyList(geojsonfilename):
-
     multipolygon = ogr.Geometry(ogr.wkbMultiPolygon)
     datasource = ogr.Open(geojsonfilename, 0)
 
     layer = datasource.GetLayer()
     print(layer.GetFeatureCount())
 
-
     for idx, feature in enumerate(layer):
 
         poly = feature.GetGeometryRef()
 
         if poly:
-
             multipolygon.AddGeometry(feature.GetGeometryRef().Clone())
 
     return multipolygon
 
-def readwktcsv(csv_path,removeNoBuildings=True, groundTruthFile=True):
+
+def readwktcsv(csv_path, removeNoBuildings=True, groundTruthFile=True):
     #
     # csv Format Expected = ['ImageId', 'BuildingId', 'PolygonWKT_Pix', 'PolygonWKT_Geo']
     # returns list of Dictionaries {'ImageId': image_id, 'BuildingId': building_id, 'poly': poly}
@@ -226,7 +227,9 @@ def returnBoundBox(xOff, yOff, pixDim, inputRaster, targetSR='', pixelSpace=Fals
 
     return poly
 
-def createBoxFromLine(tmpGeom, ratio=1, halfWidth=-999, transformRequired=True, transform_WGS84_To_UTM='', transform_UTM_To_WGS84=''):
+
+def createBoxFromLine(tmpGeom, ratio=1, halfWidth=-999, transformRequired=True, transform_WGS84_To_UTM='',
+                      transform_UTM_To_WGS84=''):
     # create Polygon Box Oriented with the line
 
     if transformRequired:
@@ -235,33 +238,32 @@ def createBoxFromLine(tmpGeom, ratio=1, halfWidth=-999, transformRequired=True, 
 
         tmpGeom.Transform(transform_WGS84_To_UTM)
 
-
     # calculatuate Centroid
     centroidX, centroidY, centroidZ = tmpGeom.Centroid().GetPoint()
     lengthM = tmpGeom.Length()
-    if halfWidth ==-999:
-        halfWidth = lengthM/(2*ratio)
+    if halfWidth == -999:
+        halfWidth = lengthM / (2 * ratio)
 
-    envelope=tmpGeom.GetPoints()
+    envelope = tmpGeom.GetPoints()
     cX1 = envelope[0][0]
     cY1 = envelope[0][1]
     cX2 = envelope[1][0]
     cY2 = envelope[1][1]
-    angRad = math.atan2(cY2-cY1,cX2-cX1)
+    angRad = math.atan2(cY2 - cY1, cX2 - cX1)
 
-    d_X = math.cos(angRad-math.pi/2)*halfWidth
-    d_Y = math.sin(angRad-math.pi/2)*halfWidth
+    d_X = math.cos(angRad - math.pi / 2) * halfWidth
+    d_Y = math.sin(angRad - math.pi / 2) * halfWidth
 
-    e_X = math.cos(angRad+math.pi/2)*halfWidth
-    e_Y = math.sin(angRad+math.pi/2)*halfWidth
+    e_X = math.cos(angRad + math.pi / 2) * halfWidth
+    e_Y = math.sin(angRad + math.pi / 2) * halfWidth
 
     ring = ogr.Geometry(ogr.wkbLinearRing)
 
-    ring.AddPoint(cX1+d_X, cY1+d_Y)
-    ring.AddPoint(cX1+e_X, cY1+e_Y)
-    ring.AddPoint(cX2+e_X, cY2+e_Y)
-    ring.AddPoint(cX2+d_X, cY2+d_Y)
-    ring.AddPoint(cX1+d_X, cY1+d_Y)
+    ring.AddPoint(cX1 + d_X, cY1 + d_Y)
+    ring.AddPoint(cX1 + e_X, cY1 + e_Y)
+    ring.AddPoint(cX2 + e_X, cY2 + e_Y)
+    ring.AddPoint(cX2 + d_X, cY2 + d_Y)
+    ring.AddPoint(cX1 + d_X, cY1 + d_Y)
     polyGeom = ogr.Geometry(ogr.wkbPolygon)
     polyGeom.AddGeometry(ring)
     areaM = polyGeom.GetArea()
@@ -269,7 +271,6 @@ def createBoxFromLine(tmpGeom, ratio=1, halfWidth=-999, transformRequired=True, 
     if transformRequired:
         tmpGeom.Transform(transform_UTM_To_WGS84)
         polyGeom.Transform(transform_UTM_To_WGS84)
-
 
     return (polyGeom, areaM, angRad, lengthM)
 
@@ -280,22 +281,19 @@ def pixelToGeoCoord(xPix, yPix, inputRaster, sourceSR='', geomTransform='', targ
     # targetSR.ImportFromEPSG(4326)
     # Transform can be performed at the polygon level instead of pixel level
 
-    if targetSR =='':
-        performReprojection=False
+    if targetSR == '':
+        performReprojection = False
         targetSR = osr.SpatialReference()
         targetSR.ImportFromEPSG(4326)
     else:
-        performReprojection=True
+        performReprojection = True
 
-    if geomTransform=='':
+    if geomTransform == '':
         srcRaster = gdal.Open(inputRaster)
         geomTransform = srcRaster.GetGeoTransform()
 
         source_sr = osr.SpatialReference()
         source_sr.ImportFromWkt(srcRaster.GetProjectionRef())
-
-
-
 
     geom = ogr.Geometry(ogr.wkbPoint)
     xOrigin = geomTransform[0]
@@ -307,9 +305,8 @@ def pixelToGeoCoord(xPix, yPix, inputRaster, sourceSR='', geomTransform='', targ
     yCoord = (yPix * pixelHeight) + yOrigin
     geom.AddPoint(xCoord, yCoord)
 
-
     if performReprojection:
-        if sourceSR=='':
+        if sourceSR == '':
             srcRaster = gdal.Open(inputRaster)
             sourceSR = osr.SpatialReference()
             sourceSR.ImportFromWkt(srcRaster.GetProjectionRef())
@@ -376,12 +373,12 @@ def geoPolygonToPixelPolygonWKT(geom, inputRaster, targetSR, geomTransform, brea
 
     return polygonPixBufferWKTList
 
+
 def pixelWKTToGeoWKT(geomWKT, inputRaster, targetSR='', geomTransform='', breakMultiPolygonPix=False):
     # Returns  GeoCoordinateList from PixelCoordinateList
-    if geomTransform=='':
+    if geomTransform == '':
         targetRaster = gdal.Open(inputRaster)
         geomTransform = targetRaster.GetGeoTransform()
-
 
     geom = ogr.CreateGeometryFromWkt(geomWKT)
 
@@ -395,9 +392,9 @@ def pixelWKTToGeoWKT(geomWKT, inputRaster, targetSR='', geomTransform='', breakM
 
             for pIdx in xrange(ring.GetPointCount()):
                 xPix, yPix, zPix = ring.GetPoint(pIdx)
-                #xPix, yPix = latlon2pixel(lat, lon, inputRaster, targetSR, geomTransform)
-                lon, lat = pixelToGeoCoord(xPix, yPix, inputRaster=inputRaster, targetSR=targetSR, geomTransform=geomTransform)
-
+                # xPix, yPix = latlon2pixel(lat, lon, inputRaster, targetSR, geomTransform)
+                lon, lat = pixelToGeoCoord(xPix, yPix, inputRaster=inputRaster, targetSR=targetSR,
+                                           geomTransform=geomTransform)
 
             polygonGeo.AddGeometry(ringGeo)
         polygonGeoBuffer = polygonGeo.Buffer(0.0)
@@ -447,12 +444,7 @@ def pixelWKTToGeoWKT(geomWKT, inputRaster, targetSR='', geomTransform='', breakM
 
         polygonGeoBufferList.append([pointGeo, geom])
 
-
-
-
-
-
-    #for polygonTest in polygonGeoBufferList:
+    # for polygonTest in polygonGeoBufferList:
     #    if polygonTest[0].GetGeometryName() == 'POLYGON':
     #        polygonGeoBufferWKTList.append([polygonTest[0].ExportToWkt(), polygonTest[1].ExportToWkt()])
     #    elif polygonTest[0].GetGeometryName() == 'MULTIPOLYGON':
@@ -463,6 +455,7 @@ def pixelWKTToGeoWKT(geomWKT, inputRaster, targetSR='', geomTransform='', breakM
 
     # [GeoWKT, PixWKT])
     return polygonGeoBufferList
+
 
 def geoWKTToPixelWKT(geom, inputRaster, targetSR, geomTransform, pixPrecision=2):
     # Returns Pixel Coordinate List and GeoCoordinateList
@@ -528,7 +521,6 @@ def geoWKTToPixelWKT(geom, inputRaster, targetSR, geomTransform, pixPrecision=2)
             point.AddPoint(xPix, yPix)
         geom_list.append([point, geom])
 
-
     for polygonTest in geom_list:
         if polygonTest[0].GetGeometryName() == 'POLYGON' or \
                         polygonTest[0].GetGeometryName() == 'LINESTRING' or \
@@ -545,7 +537,7 @@ def convert_wgs84geojson_to_pixgeojson(wgs84geojson, inputraster, image_id=[], p
                                        breakMultiPolygonGeo=True, pixPrecision=2):
     dataSource = ogr.Open(wgs84geojson, 0)
     layer = dataSource.GetLayer()
-    #print(layer.GetFeatureCount())
+    # print(layer.GetFeatureCount())
     building_id = 0
     # check if geoJsonisEmpty
     buildinglist = []
@@ -554,20 +546,17 @@ def convert_wgs84geojson_to_pixgeojson(wgs84geojson, inputraster, image_id=[], p
 
     if layer.GetFeatureCount() > 0:
 
-        if len(inputraster)>0:
+        if len(inputraster) > 0:
             if os.path.isfile(inputraster):
                 srcRaster = gdal.Open(inputraster)
                 targetSR = osr.SpatialReference()
                 targetSR.ImportFromWkt(srcRaster.GetProjectionRef())
                 geomTransform = srcRaster.GetGeoTransform()
 
-
-
-
                 for feature in layer:
 
                     geom = feature.GetGeometryRef()
-                    if len(inputraster)>0:
+                    if len(inputraster) > 0:
                         ## Calculate 3 band
                         if only_polygons:
                             geom_wkt_list = geoPolygonToPixelPolygonWKT(geom, inputraster, targetSR, geomTransform,
@@ -592,18 +581,17 @@ def convert_wgs84geojson_to_pixgeojson(wgs84geojson, inputraster, image_id=[], p
                                              'polyPix': ogr.CreateGeometryFromWkt('POLYGON EMPTY')
                                              })
             else:
-                #print("no File exists")
+                # print("no File exists")
                 pass
         if pixelgeojson:
             exporttogeojson(pixelgeojson, buildinglist=buildinglist)
 
-
-
     return buildinglist
+
 
 def convert_pixgwktList_to_wgs84wktList(inputRaster, wktPolygonPixList):
     ## returns # [[GeoWKT, PixWKT], ...]
-    wgs84WKTList=[]
+    wgs84WKTList = []
     if os.path.isfile(inputRaster):
         srcRaster = gdal.Open(inputRaster)
         targetSR = osr.SpatialReference()
@@ -619,6 +607,7 @@ def convert_pixgwktList_to_wgs84wktList(inputRaster, wktPolygonPixList):
 
     # [[GeoWKT, PixWKT], ...]
     return wgs84WKTList
+
 
 def create_rtreefromdict(buildinglist):
     # create index
@@ -667,8 +656,9 @@ def get_envelope(poly):
 
     return poly1
 
+
 def utm_getZone(longitude):
-    return (int(1+(longitude+180.0)/6.0))
+    return (int(1 + (longitude + 180.0) / 6.0))
 
 
 def utm_isNorthern(latitude):
@@ -723,8 +713,8 @@ def getRasterExtent(srcImage):
 
     return geoTrans, poly, ulX, ulY, lrX, lrY
 
-def createPolygonFromCenterPoint(cX,cY, radiusMeters, transform_WGS_To_UTM_Flag=True):
 
+def createPolygonFromCenterPoint(cX, cY, radiusMeters, transform_WGS_To_UTM_Flag=True):
     point = ogr.Geometry(ogr.wkbPoint)
     point.AddPoint(cX, cY)
 
@@ -740,7 +730,7 @@ def createPolygonFromCenterPoint(cX,cY, radiusMeters, transform_WGS_To_UTM_Flag=
     return poly
 
 
-def createPolygonFromCorners(lrX,lrY,ulX, ulY):
+def createPolygonFromCorners(lrX, lrY, ulX, ulY):
     # Create ring
     ring = ogr.Geometry(ogr.wkbLinearRing)
     ring.AddPoint(lrX, lrY)
@@ -757,7 +747,6 @@ def createPolygonFromCorners(lrX,lrY,ulX, ulY):
 
 
 def clipShapeFile(shapeSrc, outputFileName, polyToCut, minpartialPerc=0.0, shapeLabel='Geo', debug=False):
-
     source_layer = shapeSrc.GetLayer()
     source_srs = source_layer.GetSpatialRef()
     # Create the output Layer
@@ -782,7 +771,6 @@ def clipShapeFile(shapeSrc, outputFileName, polyToCut, minpartialPerc=0.0, shape
         outFeatureDebug.SetGeometry(polyToCut)
         outLayerDebug.CreateFeature(outFeatureDebug)
 
-
     outDataSource = outDriver.CreateDataSource(outGeoJSon)
     outLayer = outDataSource.CreateLayer("groundTruth", source_srs, geom_type=ogr.wkbPolygon)
     # Add input Layer Fields to the output Layer
@@ -798,7 +786,7 @@ def clipShapeFile(shapeSrc, outputFileName, polyToCut, minpartialPerc=0.0, shape
 
         outFeature = ogr.Feature(outLayerDefn)
 
-        for i in range (0, inLayerDefn.GetFieldCount()):
+        for i in range(0, inLayerDefn.GetFieldCount()):
             outFeature.SetField(inLayerDefn.GetFieldDefn(i).GetNameRef(), inFeature.GetField(i))
 
         geom = inFeature.GetGeometryRef()
@@ -806,7 +794,7 @@ def clipShapeFile(shapeSrc, outputFileName, polyToCut, minpartialPerc=0.0, shape
         partialDec = -1
         if geomNew:
 
-            if geomNew.GetGeometryName()=='POINT':
+            if geomNew.GetGeometryName() == 'POINT':
                 outFeature.SetField("partialDec", 1)
                 outFeature.SetField("partialBuilding", 1)
             else:
@@ -828,32 +816,31 @@ def clipShapeFile(shapeSrc, outputFileName, polyToCut, minpartialPerc=0.0, shape
             outFeature.SetField("partialBuilding", 1)
             outFeature.SetField("partialBuilding", 1)
 
-
         outFeature.SetGeometry(geomNew)
         if partialDec >= minpartialPerc:
             outLayer.CreateFeature(outFeature)
-            #print ("AddFeature")
+            # print ("AddFeature")
 
 
-def cutChipFromMosaic(rasterFileList, shapeFileSrcList, outlineSrc='',outputDirectory='', outputPrefix='clip_',
+def cutChipFromMosaic(rasterFileList, shapeFileSrcList, outlineSrc='', outputDirectory='', outputPrefix='clip_',
                       clipSizeMX=100, clipSizeMY=100, clipOverlap=0.0, minpartialPerc=0.0, createPix=False,
                       baseName='',
                       imgIdStart=-1,
                       parrallelProcess=False,
                       noBlackSpace=False,
                       randomClip=-1):
-    #rasterFileList = [['rasterLocation', 'rasterDescription']]
+    # rasterFileList = [['rasterLocation', 'rasterDescription']]
     # i.e rasterFileList = [['/path/to/3band_AOI_1.tif, '3band'],
     #                       ['/path/to/8band_AOI_1.tif, '8band']
     #                        ]
     # open Base Image
-    #print(rasterFileList[0][0])
+    # print(rasterFileList[0][0])
     srcImage = gdal.Open(rasterFileList[0][0])
     geoTrans, poly, ulX, ulY, lrX, lrY = getRasterExtent(srcImage)
     # geoTrans[1] w-e pixel resolution
     # geoTrans[5] n-s pixel resolution
-    if outputDirectory=="":
-        outputDirectory=os.path.dirname(rasterFileList[0][0])
+    if outputDirectory == "":
+        outputDirectory = os.path.dirname(rasterFileList[0][0])
 
     rasterFileBaseList = []
     for rasterFile in rasterFileList:
@@ -869,15 +856,14 @@ def cutChipFromMosaic(rasterFileList, shapeFileSrcList, outlineSrc='',outputDire
     maxX = env[1]
     maxY = env[3]
 
-    #return poly to WGS84
+    # return poly to WGS84
     if not createPix:
         poly.Transform(transform_UTM_To_WGS84)
 
     shapeSrcList = []
     for shapeFileSrc in shapeFileSrcList:
         print(shapeFileSrc[1])
-        shapeSrcList.append([ogr.Open(shapeFileSrc[0],0), shapeFileSrc[1]])
-
+        shapeSrcList.append([ogr.Open(shapeFileSrc[0], 0), shapeFileSrc[1]])
 
     if outlineSrc == '':
         geomOutline = poly
@@ -896,16 +882,16 @@ def cutChipFromMosaic(rasterFileList, shapeFileSrcList, outlineSrc='',outputDire
     idx = 0
     if createPix:
         print(geoTrans)
-        clipSizeMX=clipSizeMX*geoTrans[1]
-        clipSizeMY=abs(clipSizeMY*geoTrans[5])
+        clipSizeMX = clipSizeMX * geoTrans[1]
+        clipSizeMY = abs(clipSizeMY * geoTrans[5])
 
-    xInterval = np.arange(minX, maxX, clipSizeMX*(1.0-clipOverlap))
+    xInterval = np.arange(minX, maxX, clipSizeMX * (1.0 - clipOverlap))
     print('minY = {}'.format(minY))
     print('maxY = {}'.format(maxY))
     print('clipsizeMX ={}'.format(clipSizeMX))
     print('clipsizeMY ={}'.format(clipSizeMY))
 
-    yInterval = np.arange(minY, maxY, clipSizeMY*(1.0-clipOverlap))
+    yInterval = np.arange(minY, maxY, clipSizeMY * (1.0 - clipOverlap))
     print(xInterval)
     print(yInterval)
     for llX in xInterval:
@@ -915,8 +901,8 @@ def cutChipFromMosaic(rasterFileList, shapeFileSrcList, outlineSrc='',outputDire
 
         else:
             for llY in yInterval:
-                uRX = llX+clipSizeMX
-                uRY = llY+clipSizeMY
+                uRX = llX + clipSizeMX
+                uRY = llY + clipSizeMY
 
                 # check if uRX or uRY is outside image
                 if noBlackSpace:
@@ -927,45 +913,36 @@ def cutChipFromMosaic(rasterFileList, shapeFileSrcList, outlineSrc='',outputDire
                         uRY = maxY
                         llY = maxY - clipSizeMY
 
-
-
-
                 polyCut = createPolygonFromCorners(llX, llY, uRX, uRY)
-
-
-
-
-
-
 
                 if not createPix:
                     polyCut.Transform(transform_UTM_To_WGS84)
                 ## add debug line do cuts
                 if (polyCut).Intersects(geomOutline):
                     print("Do it.")
-                    #envCut = polyCut.GetEnvelope()
-                    #minXCut = envCut[0]
-                    #minYCut = envCut[2]
-                    #maxXCut = envCut[1]
-                    #maxYCut = envCut[3]
+                    # envCut = polyCut.GetEnvelope()
+                    # minXCut = envCut[0]
+                    # minYCut = envCut[2]
+                    # maxXCut = envCut[1]
+                    # maxYCut = envCut[3]
 
-                    #debug for real
+                    # debug for real
                     minXCut = llX
                     minYCut = llY
                     maxXCut = uRX
                     maxYCut = uRY
 
-                    #print('minYCut = {}'.format(minYCut))
-                    #print('maxYCut = {}'.format(maxYCut))
-                    #print('minXCut = {}'.format(minXCut))
-                    #print('maxXCut = {}'.format(maxXCut))
+                    # print('minYCut = {}'.format(minYCut))
+                    # print('maxYCut = {}'.format(maxYCut))
+                    # print('minXCut = {}'.format(minXCut))
+                    # print('maxXCut = {}'.format(maxXCut))
 
-                    #print('clipsizeMX ={}'.format(clipSizeMX))
-                    #print('clipsizeMY ={}'.format(clipSizeMY))
+                    # print('clipsizeMX ={}'.format(clipSizeMX))
+                    # print('clipsizeMY ={}'.format(clipSizeMY))
 
 
 
-                    idx = idx+1
+                    idx = idx + 1
                     if imgIdStart == -1:
                         imgId = -1
                     else:
@@ -984,6 +961,7 @@ def cutChipFromMosaic(rasterFileList, shapeFileSrcList, outlineSrc='',outputDire
 
     return chipSummaryList
 
+
 def createclip(outputDirectory, rasterFileList, shapeSrcList,
                maxXCut, maxYCut, minYCut, minXCut,
                rasterFileBaseList=[],
@@ -994,14 +972,12 @@ def createclip(outputDirectory, rasterFileList, shapeSrcList,
                className='',
                baseName='',
                imgId=-1):
-
-    #rasterFileList = [['rasterLocation', 'rasterDescription']]
+    # rasterFileList = [['rasterLocation', 'rasterDescription']]
     # i.e rasterFileList = [['/path/to/3band_AOI_1.tif, '3band'],
     #                       ['/path/to/8band_AOI_1.tif, '8band']
     #                        ]
 
     polyCutWGS = createPolygonFromCorners(minXCut, minYCut, maxXCut, maxYCut)
-
 
     if not rasterFileBaseList:
         rasterFileBaseList = []
@@ -1014,19 +990,19 @@ def createclip(outputDirectory, rasterFileList, shapeSrcList,
     chipNameList = []
     for rasterFile in rasterFileList:
         if className == '':
-            if imgId==-1:
+            if imgId == -1:
                 chipNameList.append(outputPrefix + rasterFile[1] +
                                     "_" + baseName + "_{}_{}.tif".format(minXCut, minYCut))
             else:
                 chipNameList.append(outputPrefix + rasterFile[1] +
                                     "_" + baseName + "_img{}.tif".format(imgId))
         else:
-            if imgId==-1:
+            if imgId == -1:
                 chipNameList.append(outputPrefix + className + "_" +
                                     rasterFile[1] + "_" + baseName + "_{}_{}.tif".format(minXCut, minYCut))
             else:
                 chipNameList.append(outputPrefix + className + '_' +
-                                rasterFile[1] + "_" + baseName + "_img{}.tif".format(imgId))
+                                    rasterFile[1] + "_" + baseName + "_img{}.tif".format(imgId))
 
     # clip raster
 
@@ -1035,14 +1011,13 @@ def createclip(outputDirectory, rasterFileList, shapeSrcList,
         ## Clip Image
         print(rasterFile)
         print(outputFileName)
-        subprocess.call(["gdalwarp", "-te", "{}".format(minXCut), "{}".format(minYCut),  "{}".format(maxXCut),
+        subprocess.call(["gdalwarp", "-te", "{}".format(minXCut), "{}".format(minYCut), "{}".format(maxXCut),
                          "{}".format(maxYCut),
                          '-co', 'PHOTOMETRIC=rgb',
                          rasterFile[0], outputFileName])
 
     baseLayerRasterName = os.path.join(outputDirectory, rasterFileList[0][1], className, chipNameList[0])
     outputFileName = os.path.join(outputDirectory, rasterFileList[0][1], chipNameList[0])
-
 
     ### Clip poly to cust to Raster Extent
     if rasterPolyEnvelope.GetArea() == 0:
@@ -1065,7 +1040,6 @@ def createclip(outputDirectory, rasterFileList, shapeSrcList,
 
         clipShapeFile(shapeSrc[0], outGeoJson, polyVectorCut, minpartialPerc=minpartialPerc)
 
-
     chipSummary = {'rasterSource': baseLayerRasterName,
                    'chipName': chipNameList[0],
                    'geoVectorName': outGeoJson,
@@ -1074,13 +1048,14 @@ def createclip(outputDirectory, rasterFileList, shapeSrcList,
 
     return chipSummary
 
+
 def cutChipFromRasterCenter(rasterFileList, shapeFileSrc, outlineSrc='',
                             outputDirectory='', outputPrefix='clip_',
                             clipSizeMeters=50, createPix=False,
-                            classFieldName = 'TYPE',
+                            classFieldName='TYPE',
                             minpartialPerc=0.1,
                             ):
-    #rasterFileList = [['rasterLocation', 'rasterDescription']]
+    # rasterFileList = [['rasterLocation', 'rasterDescription']]
     # i.e rasterFileList = [['/path/to/3band_AOI_1.tif, '3band'],
     #                       ['/path/to/8band_AOI_1.tif, '8band']
     #                        ]
@@ -1123,36 +1098,30 @@ def cutChipFromRasterCenter(rasterFileList, shapeFileSrc, outlineSrc='',
         polyCut = createPolygonFromCenterPoint(cx, cy, radiusMeters=clipSizeMeters)
         print(classFieldName)
         classDescription = feature.GetField(classFieldName)
-        classDescription = classDescription.replace(" ","")
+        classDescription = classDescription.replace(" ", "")
         envCut = polyCut.GetEnvelope()
         minXCut = envCut[0]
         minYCut = envCut[2]
         maxXCut = envCut[1]
         maxYCut = envCut[3]
         createclip(outputDirectory, rasterFileList, shapeSrc,
-                       maxXCut, maxYCut, minYCut, minXCut,
-                       rasterFileBaseList=rasterFileBaseList,
-                       minpartialPerc=minpartialPerc,
-                       outputPrefix=outputPrefix,
-                       createPix=createPix,
-                       rasterPolyEnvelope=poly,
-                       className=classDescription)
+                   maxXCut, maxYCut, minYCut, minXCut,
+                   rasterFileBaseList=rasterFileBaseList,
+                   minpartialPerc=minpartialPerc,
+                   outputPrefix=outputPrefix,
+                   createPix=createPix,
+                   rasterPolyEnvelope=poly,
+                   className=classDescription)
 
 
-
-def rotateClip(clipFileName, sourceGeoJson, rotaionList=[0,90,180,275]):
+def rotateClip(clipFileName, sourceGeoJson, rotaionList=[0, 90, 180, 275]):
     # will add "_{}.ext".formate(rotationList[i]
     pass
 
 
-
 def createMaskedMosaic(input_raster, output_raster, outline_file):
-
     subprocess.call(["gdalwarp", "-q", "-cutline", outline_file, "-of", "GTiff", input_raster, output_raster,
                      '-wo', 'OPTIMIZE_SIZE=YES',
                      '-co', 'COMPRESS=JPEG',
                      '-co', 'PHOTOMETRIC=YCBCR',
                      '-co', 'TILED=YES'])
-
-
-
