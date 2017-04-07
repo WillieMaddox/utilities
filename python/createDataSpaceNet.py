@@ -10,41 +10,35 @@ def processRasterChip(rasterImage, rasterDescription, geojson, geojsonDescriptio
                       imagePixSize=-1, clipOverlap=0.0, randomClip=False,
                       minpartialPerc=0.0,
                       outputPrefix=''):
-
     # cut Image to Size
-    chipSummaryList=[]
-    if imagePixSize>0:
+    chipSummaryList = []
+    if imagePixSize > 0:
 
         rasterFileList = [[rasterImage, rasterDescription]]
         shapeFileSrcList = [[geojson, geojsonDescription]]
         # cut image to size
         print(rasterFileList)
         chipSummaryList = gT.cutChipFromMosaic(rasterFileList,
-                                           shapeFileSrcList,
-                                           outputDirectory=outputDirectory,
-                                           outputPrefix=outputPrefix,
-                                           clipSizeMX=imagePixSize,
-                                           clipSizeMY=imagePixSize,
-                                           minpartialPerc=minpartialPerc,
-                                           createPix=True,
-                                           clipOverlap=clipOverlap,
-                                           noBlackSpace=True,
-                                           randomClip=-1
-                                           )
-
-
-
-
+                                               shapeFileSrcList,
+                                               outputDirectory=outputDirectory,
+                                               outputPrefix=outputPrefix,
+                                               clipSizeMX=imagePixSize,
+                                               clipSizeMY=imagePixSize,
+                                               minpartialPerc=minpartialPerc,
+                                               createPix=True,
+                                               clipOverlap=clipOverlap,
+                                               noBlackSpace=True,
+                                               randomClip=-1
+                                               )
 
     else:
-        chipSummary =  {'rasterSource': rasterImage,
-                   'chipName': rasterImage,
-                   'geoVectorName': geojson,
-                   'pixVectorName': ''
-                   }
+        chipSummary = {'rasterSource': rasterImage,
+                       'chipName': rasterImage,
+                       'geoVectorName': geojson,
+                       'pixVectorName': ''
+                       }
 
         chipSummaryList.append(chipSummary)
-
 
     return chipSummaryList
 
@@ -55,7 +49,6 @@ def processChipSummaryList(chipSummaryList, outputDirectory='', annotationType='
                            folder_name='folder_name',
                            bboxResize=1.0
                            ):
-
     if outputPixType == '':
         convertTo8Bit = False
     else:
@@ -64,15 +57,11 @@ def processChipSummaryList(chipSummaryList, outputDirectory='', annotationType='
     entryList = []
     for chipSummary in chipSummaryList:
 
-
-
         annotationName = os.path.basename(chipSummary['rasterSource'])
         annotationName = annotationName.replace('.tif', '.xml')
         annotationName = os.path.join(outputDirectory, annotationName)
 
-
-
-        if annotationType=='PASCALVOC2012':
+        if annotationType == 'PASCALVOC2012':
             entry = lT.geoJsonToPASCALVOC2012(annotationName, chipSummary['geoVectorName'], chipSummary['rasterSource'],
                                               dataset='spacenetV2',
                                               folder_name='spacenetV2',
@@ -82,9 +71,8 @@ def processChipSummaryList(chipSummaryList, outputDirectory='', annotationType='
                                               convertTo8Bit=convertTo8Bit,
                                               outputPixType=outputPixType,
                                               outputFormat=outputFormat,
-                                              bboxResize=bboxResize
-                                              )
-        elif annotationType=='DARKNET':
+                                              bboxResize=bboxResize)
+        elif annotationType == 'DARKNET':
             entry = lT.geoJsonToDARKNET(annotationName, chipSummary['geoVectorName'], chipSummary['rasterSource'],
                                         dataset='spacenetV2',
                                         folder_name='spacenetV2',
@@ -92,22 +80,22 @@ def processChipSummaryList(chipSummaryList, outputDirectory='', annotationType='
                                         convertTo8Bit=convertTo8Bit,
                                         outputPixType=outputPixType,
                                         outputFormat=outputFormat,
-                                        bboxResize=bboxResize
-                                        )
+                                        bboxResize=bboxResize)
 
-        elif annotationType=='SBD':
+        elif annotationType == 'SBD':
             basename = os.path.basename(chipSummary['rasterSource'])
             annotationName = basename.replace('.tif', '.mat')
-            annotationName_cls = os.path.join(outputDirectory,'cls', annotationName)
-            annotationName_inst = os.path.join(outputDirectory,'inst', annotationName)
+            annotationName_cls = os.path.join(outputDirectory, 'cls', annotationName)
+            annotationName_inst = os.path.join(outputDirectory, 'inst', annotationName)
 
-            #Check to make sure output directories exist, if not make it.
-            if not os.path.exists(os.path.join(outputDirectory,'cls')):
-              os.makedirs(os.path.join(outputDirectory,'cls'))
-            if not os.path.exists(os.path.join(outputDirectory,'inst')):
-              os.makedirs(os.path.join(outputDirectory,'inst'))
-            
-            entry = lT.geoJsonToSBD(annotationName_cls, annotationName_inst, chipSummary['geoVectorName'], chipSummary['rasterSource'],
+            # Check to make sure output directories exist, if not make it.
+            if not os.path.exists(os.path.join(outputDirectory, 'cls')):
+                os.makedirs(os.path.join(outputDirectory, 'cls'))
+            if not os.path.exists(os.path.join(outputDirectory, 'inst')):
+                os.makedirs(os.path.join(outputDirectory, 'inst'))
+
+            entry = lT.geoJsonToSBD(annotationName_cls, annotationName_inst, chipSummary['geoVectorName'],
+                                    chipSummary['rasterSource'],
                                     dataset='spacenetV2',
                                     folder_name='spacenetV2',
                                     annotationStyle=annotationType,
@@ -115,47 +103,40 @@ def processChipSummaryList(chipSummaryList, outputDirectory='', annotationType='
                                     convertTo8Bit=convertTo8Bit,
                                     outputPixType=outputPixType,
                                     outputFormat=outputFormat,
-                                    bboxResize=bboxResize
-                                    )
+                                    bboxResize=bboxResize)
         else:
             print("Annotation Type = {} is not supported yet".format(annotationType))
             break
-
-
 
         entryList.append(entry)
 
     return entryList
 
+
 def createTrainTestSplitSummary(entryList, trainTestSplit=0.8,
                                 outputDirectory='',
                                 annotationSummaryPrefix='',
                                 annotationType='PASCALVOC2012',
-                                shuffleList=True,
-                           ):
-
+                                shuffleList=True):
     if shuffleList:
         random.shuffle(entryList)
 
-
-    splitPoint=int(round(len(entryList)*trainTestSplit))
+    splitPoint = int(round(len(entryList) * trainTestSplit))
     trainvalList = entryList[0:splitPoint]
-    testList     = entryList[splitPoint+1:]
+    testList = entryList[splitPoint + 1:]
 
-
-    trainValFileName = os.path.join(outputDirectory, annotationSummaryPrefix+'trainval.txt')
+    trainValFileName = os.path.join(outputDirectory, annotationSummaryPrefix + 'trainval.txt')
     print('creating trainval.txt {} entries'.format(len(trainvalList)))
     print('Writing to TrainVal List to file: {}'.format(trainValFileName))
     with open(trainValFileName, 'w') as f:
         for entry in trainvalList:
-            if annotationType=='SBD':
+            if annotationType == 'SBD':
                 f.write('{} {} {}\n'.format(entry['rasterFileName'], entry['annotationName_cls'],
                                             entry['annotationName_inst']))
             else:
                 f.write('{} {}\n'.format(entry['rasterFileName'], entry['annotationName']))
 
-
-    testFileName = os.path.join(outputDirectory, annotationSummaryPrefix+'test.txt')
+    testFileName = os.path.join(outputDirectory, annotationSummaryPrefix + 'test.txt')
     testNameSizeFileName = os.path.join(outputDirectory, annotationSummaryPrefix + 'test_name_size.txt')
     print('creating test.txt {} entries'.format(len(testList)))
     print('Writing to Test List to file: {}'.format(testFileName))
@@ -170,12 +151,12 @@ def createTrainTestSplitSummary(entryList, trainTestSplit=0.8,
                 f.write('{} {}\n'.format(entry['rasterFileName'], entry['annotationName']))
                 fname.write('{} {} {}\n'.format(entry['basename'], entry['width'], entry['height']))
 
-
     return (trainValFileName, testFileName, testNameSizeFileName)
+
 
 if __name__ == '__main__':
 
-    #python createDataSpaceNet.py /data/spacenet_sample/AOI_2_Vegas_Train/ RGB-PanSharpen \
+    # python createDataSpaceNet.py /data/spacenet_sample/AOI_2_Vegas_Train/ RGB-PanSharpen \
     #                             --outputDirectory /data/spacenet_sample/annotations/ \
     #                             --imgSizePix 416
 
@@ -252,24 +233,21 @@ if __name__ == '__main__':
     entryList = []
     srcSpaceNetDirectory = args.srcSpaceNetFolder
 
-    #listOfAOIs = [subdir for subdir in os.listdir(spaceNetDirectory) if
+    # listOfAOIs = [subdir for subdir in os.listdir(spaceNetDirectory) if
     #              os.path.isdir(os.path.join(spaceNetDirectory, subdir))]
 
     listOfAOIs = [srcSpaceNetDirectory]
     srcImageryDirectory = args.srcImageryDirectory  # 'PAN', 'MUL, 'MUL-PanSharpen', 'RGB-PanSharpen'
     if args.spacenetVersion == 2:
-        geojsonDirectory = os.path.join('geojson', args.geoJsonDirectory) # 'geojson/buildings/'
+        geojsonDirectory = os.path.join('geojson', args.geoJsonDirectory)  # 'geojson/buildings/'
     elif args.spacenetVersion == 1:
-        geojsonDirectory = os.path.join('vectordata','geojson')
-        # 'vectordata/geojson'
+        geojsonDirectory = os.path.join('vectordata', 'geojson')
     else:
         print('Bad Spacenet Version Submitted,  Version {} is not supported'.foramt(args.spacenetVersion))
 
     if args.convertTo8Bit:
-
         outputDataType = 'Byte'
         outputFileType = args.outputFileType
-
     else:
         outputDataType = ''
         outputFileType = ''
@@ -283,7 +261,7 @@ if __name__ == '__main__':
         fullPathSubDir = os.path.join(srcSpaceNetDirectory, aoiSubDir)
 
         ## Create Annotations directory
-        #fullPathAnnotationsDirectory = os.path.join(fullPathSubDir, annotationsDirectory)
+        # fullPathAnnotationsDirectory = os.path.join(fullPathSubDir, annotationsDirectory)
         if not os.path.exists(fullPathAnnotationsDirectory):
             os.makedirs(fullPathAnnotationsDirectory)
         if not os.path.exists(os.path.join(fullPathAnnotationsDirectory, 'annotations')):
@@ -299,13 +277,9 @@ if __name__ == '__main__':
         print('fullpathGeoJsonDirectory = {}'.format(fullPathGeoJsonDirectory))
         if len(listofRaster) != len(listofgeojson):
             print('Error lists do not match fix source errors')
-
             break
-
         else:
-
             for rasterImage, geoJson in zip(listofRaster, listofgeojson):
-
                 chipSummaryList = processRasterChip(rasterImage, srcImageryDirectory,
                                                     geoJson, args.geoJsonDirectory,
                                                     outputDirectory=fullPathAnnotationsDirectory,
@@ -314,7 +288,8 @@ if __name__ == '__main__':
                                                     outputPrefix='')
 
                 entryListTmp = processChipSummaryList(chipSummaryList,
-                                                      outputDirectory=os.path.join(fullPathAnnotationsDirectory, 'annotations'),
+                                                      outputDirectory=os.path.join(fullPathAnnotationsDirectory,
+                                                                                   'annotations'),
                                                       annotationType=args.annotationType,
                                                       outputFormat=outputFileType,
                                                       outputPixType=outputDataType,
@@ -331,4 +306,3 @@ if __name__ == '__main__':
                                 annotationSummaryPrefix=args.annotationSummaryPrefix,
                                 annotationType=args.annotationType,
                                 shuffleList=True)
-
