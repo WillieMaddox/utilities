@@ -147,7 +147,7 @@ def createTrainTestSplitSummary(entryList, trainTestSplit=0.8,
                 f.write('{} {}\n'.format(entry['rasterFileName'], entry['annotationName']))
                 fname.write('{} {} {}\n'.format(entry['basename'], entry['width'], entry['height']))
 
-    return (trainValFileName, testFileName, testNameSizeFileName)
+    return trainValFileName, testFileName, testNameSizeFileName
 
 
 if __name__ == '__main__':
@@ -256,7 +256,7 @@ if __name__ == '__main__':
     for aoiSubDir in listOfAOIs:
         fullPathSubDir = os.path.join(srcSpaceNetDirectory, aoiSubDir)
 
-        ## Create Annotations directory
+        # Create Annotations directory
         # fullPathAnnotationsDirectory = os.path.join(fullPathSubDir, annotationsDirectory)
         if not os.path.exists(fullPathAnnotationsDirectory):
             os.makedirs(fullPathAnnotationsDirectory)

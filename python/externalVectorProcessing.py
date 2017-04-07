@@ -27,8 +27,6 @@ def buildTindex(rasterFolder, rasterExtention='.tif'):
     # Create the feature and set values
     featureDefn = gTindexLayer.GetLayerDefn()
 
-
-
     for rasterFile in rasterList:
         srcImage = gdal.Open(rasterFile)
 
@@ -40,21 +38,19 @@ def buildTindex(rasterFolder, rasterExtention='.tif'):
         gTindexLayer.CreateFeature(feature)
         feature = None
 
-
     return gTindex, gTindexLayer
 
 
 def createTiledGeoJsonFromSrc(rasterFolderLocation, vectorSrcFile, geoJsonOutputDirectory, rasterTileIndex='',
                               geoJsonPrefix='GEO', rasterFileExtenstion='.tif',
-                              rasterPrefixToReplace='PAN'
-                              ):
+                              rasterPrefixToReplace='PAN'):
     if rasterTileIndex == '':
         gTindex, gTindexLayer = buildTindex(rasterFolderLocation, rasterExtention=rasterFileExtenstion)
     else:
-        gTindex = ogr.Open(rasterTileIndex,0)
+        gTindex = ogr.Open(rasterTileIndex, 0)
         gTindexLayer = gTindex.GetLayer()
 
-    shapeSrc = ogr.Open(vectorSrcFile,0)
+    shapeSrc = ogr.Open(vectorSrcFile, 0)
     chipSummaryList = []
     for feature in gTindexLayer:
         featureGeom = feature.GetGeometryRef()
@@ -65,42 +61,48 @@ def createTiledGeoJsonFromSrc(rasterFolderLocation, vectorSrcFile, geoJsonOutput
         outGeoJson = os.path.join(geoJsonOutputDirectory, outGeoJson)
 
         gT.clipShapeFile(shapeSrc, outGeoJson, featureGeom, minpartialPerc=0.0, debug=False)
-        imageId = rasterFileBaseName.replace(rasterPrefixToReplace+"_", "")
+        imageId = rasterFileBaseName.replace(rasterPrefixToReplace + "_", "")
         chipSummary = {'chipName': rasterFileName,
-                           'geoVectorName': outGeoJson,
-                           'imageId': os.path.splitext(imageId)[0]}
+                       'geoVectorName': outGeoJson,
+                       'imageId': os.path.splitext(imageId)[0]}
 
         chipSummaryList.append(chipSummary)
 
     return chipSummaryList
 
+
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("-imgDir", "--imgDir", type=str,
+    parser.add_argument("-imgDir", "--imgDir",
+                        type=str,
                         help="Directory of Raster Images")
-    parser.add_argument("-vecSrc", "--vectorSrcFile", type=str,
+    parser.add_argument("-vecSrc", "--vectorSrcFile",
+                        type=str,
                         help="Geo spatial Vector src file supported by GDAL and OGR")
-    parser.add_argument("-vecPrFx", "--vectorPrefix", type=str,
+    parser.add_argument("-vecPrFx", "--vectorPrefix",
+                        type=str,
                         help="Prefix to attach to image id to indicate type of geojson created",
                         default='OSM')
-    parser.add_argument("-rastPrFx", "--rasterPrefix", type=str,
+    parser.add_argument("-rastPrFx", "--rasterPrefix",
+                        type=str,
                         help="Prefix of raster images to replace when creating geojson of geojson created",
                         default='PAN')
-    parser.add_argument("-rastExt", "--rasterExtension", type=str,
+    parser.add_argument("-rastExt", "--rasterExtension",
+                        type=str,
                         help="Extension of raster images to i.e. .tif, .png, .jpeg",
                         default='.tif')
-
-    parser.add_argument("-o", "--outputCSV", type=str,
+    parser.add_argument("-o", "--outputCSV",
+                        type=str,
                         help="Output file name and location for truth summary CSV equivalent to SpacenetV2 competition")
-    parser.add_argument("-pixPrecision", "--pixelPrecision", type=int,
+    parser.add_argument("-pixPrecision", "--pixelPrecision",
+                        type=int,
                         help="Number of decimal places to include for pixel, uses round(xPix, pixPrecision)"
                              "Default = 2",
                         default=2)
     parser.add_argument("--CreateProposalFile",
                         help="Create proposals file in format approriate for SpacenetV2 competition",
                         action="store_true")
-
 
     args = parser.parse_args()
     rasterFolderLocation = args.imgDir
@@ -120,18 +122,10 @@ if __name__ == "__main__":
                                                 rasterTileIndex='',
                                                 geoJsonPrefix=vectorPrefix,
                                                 rasterFileExtenstion=rasterFileExtension,
-                                                rasterPrefixToReplace=rasterPrefix
-                                                )
+                                                rasterPrefixToReplace=rasterPrefix)
 
-
-    outputCSVFileName = geoJsonOutputDirectory+"OSM_Proposal.csv"
+    outputCSVFileName = geoJsonOutputDirectory + "OSM_Proposal.csv"
     lT.createCSVSummaryFile(chipSummaryList, outputCSVFileName,
-                            replaceImageID=rasterPrefix+"_",
+                            replaceImageID=rasterPrefix + "_",
                             pixPrecision=pixPrecision,
-                            createProposalsFile=createProposalFile
-                            )
-
-
-
-
-
+                            createProposalsFile=createProposalFile)

@@ -794,8 +794,7 @@ def geoJsonToDARKNET(xmlFileName, geoJson, rasterImageName, im_id='',
                                               lineOutput[0],
                                               lineOutput[1],
                                               lineOutput[2],
-                                              lineOutput[3])
-                    )
+                                              lineOutput[3]))
 
     entry = {'rasterFileName': outputRaster,
              'geoJsonFileName': geoJson,
@@ -803,8 +802,7 @@ def geoJsonToDARKNET(xmlFileName, geoJson, rasterImageName, im_id='',
              'width': srcRaster.RasterXSize,
              'height': srcRaster.RasterYSize,
              'depth': srcRaster.RasterCount,
-             'basename': os.path.splitext(os.path.basename(rasterImageName))[0]
-             }
+             'basename': os.path.splitext(os.path.basename(rasterImageName))[0]}
 
     return entry
 
@@ -1034,8 +1032,7 @@ def geoJsonToSBD(annotationName_cls, annotationName_inst, geoJson, rasterSource,
                  segment=True,
                  convertTo8Bit='',
                  outputPixType='',
-                 outputFormat=''
-                 ):
+                 outputFormat=''):
     # Print raster file name
     my_raster_source = rasterSource
     print("Raster directory : ", my_raster_source)

@@ -18,25 +18,32 @@ def mkdir_p(path):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("-imgDir", "--imgDir", action='append', type=str,
+    parser.add_argument("-imgDir", "--imgDir",
+                        action='append',
+                        type=str,
                         help="Directory of Raster Images BaseLayer")
-    parser.add_argument("-geoDir", "--geojsonDir", type=str,
+    parser.add_argument("-geoDir", "--geojsonDir",
+                        type=str,
                         help="Directory of geojson files")
-
-    parser.add_argument("-o", "--outputCSV", type=str,
+    parser.add_argument("-o", "--outputCSV",
+                        type=str,
                         help="Output File Name and Location for CSV")
-    parser.add_argument("-pixPrecision", "--pixelPrecision", type=int,
+    parser.add_argument("-pixPrecision", "--pixelPrecision",
+                        type=int,
                         help="Number of decimal places to include for pixel, uses round(xPix, pixPrecision)"
                              "Default = 2",
                         default=2)
-    parser.add_argument("-outputDir", "--outputDir", type=str,
+    parser.add_argument("-outputDir", "--outputDir",
+                        type=str,
                         help="baseLocation PlaceOutproduct")
-
-    parser.add_argument("--CreateProposalFile", help="Create ProposalsFile",
+    parser.add_argument("--CreateProposalFile",
+                        help="Create ProposalsFile",
                         action="store_true")
-    parser.add_argument("-strip", "--stripOutFromGeoJson", type=str,
+    parser.add_argument("-strip", "--stripOutFromGeoJson",
+                        type=str,
                         help="string delimited")
-    parser.add_argument("--DontstripFirstUnderScore", action="store_false")
+    parser.add_argument("--DontstripFirstUnderScore",
+                        action="store_false")
     args = parser.parse_args()
 
     rasterDirectory = args.imgDir
@@ -57,8 +64,7 @@ if __name__ == "__main__":
     secondaryImagePrefix = []
     for imageDir in imageDirList:
         rasListTemp = glob.glob(os.path.join(imageDir, '*.tif'))
-        rasterDirList.append([imageDir, os.path.basename(rasListTemp[0]).split("_")[0], rasListTemp
-                              ])
+        rasterDirList.append([imageDir, os.path.basename(rasListTemp[0]).split("_")[0], rasListTemp])
 
     geoJsonList = glob.glob(os.path.join(geoJsonDirectory, '*.geojson'))
     for imageId in geoJsonList:
@@ -71,9 +77,7 @@ if __name__ == "__main__":
         chipNameList = []
         for rastDir in rasterDirList:
             if args.DontstripFirstUnderScore:
-
                 rasterName = rastDir[1] + "_" + rasterName.split('_', 1)[1]
-
             else:
                 rasterName = rastDir[1] + "_" + rasterName
             chipName = [rastDir[1], os.path.join(rastDir[0], rasterName)]
@@ -92,8 +96,7 @@ if __name__ == "__main__":
 
     splitInformationList = [['train', chipSummaryList[0:trainSplitPoint]],
                             ['test',  chipSummaryList[trainSplitPoint+1:valSplitPoint]],
-                            ['validate', chipSummaryList[valSplitPoint+1:]]
-                            ]
+                            ['validate', chipSummaryList[valSplitPoint+1:]]]
 
     outputDir = args.outputDir
 
@@ -103,7 +106,6 @@ if __name__ == "__main__":
         for rastDir in rasterDirList:
             print(outputDir)
             print(splitInformationList)
-
             mkdir_p(os.path.join(outputDir, splitInformation[0], rastDir[1]))
 
         mkdir_p(os.path.join(outputDir, splitInformation[0], 'geojson', 'buildings'))
@@ -112,16 +114,13 @@ if __name__ == "__main__":
             for chip in chipSummary['chipName']:
                 shutil.copy(chip[1], os.path.join(outputDir, splitInformation[0], chip[0]))
 
-            shutil.copy(chipSummary['geoVectorName'], os.path.join(outputDir,
-                                                                   splitInformation[0],
-                                                                   'geojson',
-                                                                   'buildings'))
+            shutil.copy(chipSummary['geoVectorName'],
+                        os.path.join(outputDir, splitInformation[0], 'geojson', 'buildings'))
 
         rasterPrefix = 'PAN'
         chipSummaryListTmp = []
 
         for chipSummary in splitInformation[1]:
-
             chipSummaryTmp = chipSummary
             chipSummaryTmp['chipName'] = chipSummary['chipName'][0][1]
             chipSummaryListTmp.append(chipSummaryTmp)

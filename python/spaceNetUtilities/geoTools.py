@@ -629,8 +629,7 @@ def create_rtree_from_poly(poly_list):
 
 def search_rtree(test_building, index):
     # input test poly ogr.Geometry  and rtree index
-    if test_building.GetGeometryName() == 'POLYGON' or \
-                    test_building.GetGeometryName() == 'MULTIPOLYGON':
+    if test_building.GetGeometryName() == 'POLYGON' or test_building.GetGeometryName() == 'MULTIPOLYGON':
         fidlist = index.intersection(test_building.GetEnvelope())
     else:
         fidlist = []

@@ -5,21 +5,22 @@ import csv
 
 if __name__ == '__main__':
 
-
     parser = argparse.ArgumentParser(description='Process SrcData for Region into small chips')
-    parser.add_argument("srcRasterList", help="csv file with path/to/raster.vrt, rasterDescripiton "
-                                              "i.e, path/to/AOI_#_Num_3band.vrt, 3band ")
-    parser.add_argument("geoJsonList", help="csv file with path/to/vector_buildings.geojson, vectorDescription"
-                                              "i.e, path/to/AOI_#_buildings.geojson, buildings")
-
-    parser.add_argument("--srcOutline", help="Vector Area describing extent of labeled area"
-                                            "If not specified, All of raster will be assumed to be labeled",
+    parser.add_argument("srcRasterList",
+                        help="csv file with path/to/raster.vrt, rasterDescripiton "
+                             "i.e, path/to/AOI_#_Num_3band.vrt, 3band")
+    parser.add_argument("geoJsonList",
+                        help="csv file with path/to/vector_buildings.geojson, vectorDescription"
+                             "i.e, path/to/AOI_#_buildings.geojson, buildings")
+    parser.add_argument("--srcOutline",
+                        help="Vector Area describing extent of labeled area "
+                             "If not specified, All of raster will be assumed to be labeled",
                         default='')
-
-    parser.add_argument("--outputDirectory", help="Location To place processed Files"
-                                                 "If not used output directory will be"
-                                                 "os.path.join(os.getcwd(), processed)",
-                                                default='')
+    parser.add_argument("--outputDirectory",
+                        help="Location To place processed Files"
+                             "If not used output directory will be"
+                             "os.path.join(os.getcwd(), processed)",
+                        default='')
     parser.add_argument("--imgSizeM",
                         help="set the dimensions of the square image in meters  "
                              "Default is 200m",
@@ -55,24 +56,21 @@ if __name__ == '__main__':
     # geoJSON AOI boundary
     args = parser.parse_args()
 
-
-
     AOI_Name = 'RIO'
     AOI_Num = 3
     # outputDirectory Base Location
 
-
     AOI_Name = args.AOI_Name
     AOI_Num = args.AOI_Num
     srcOutline = args.srcOutline
-    clipImageryToAOI=True
-    if srcOutline=='':
-        clipImageryToAOI=False
+    clipImageryToAOI = True
+    if srcOutline == '':
+        clipImageryToAOI = False
 
     outputDirectory = args.outputDirectory
 
-    if outputDirectory=='':
-    # outputDirectory Base Location
+    if outputDirectory == '':
+        # outputDirectory Base Location
         outputDirectory = os.path.join(os.getcwd(), 'processed')
 
     if not os.path.isdir(outputDirectory):
@@ -101,12 +99,11 @@ if __name__ == '__main__':
                      srcImageryList,
                      srcOutline,
                      srcVectorFileList,
-                     outputDirectory=outputDirectory,
+                     outputDirectory,
                      clipImageryToAOI=clipImageryToAOI,
                      windowSizeMeters=args.imgSizeM,
                      vrtMosaic=args.mosaicGTIFF,
                      createPix=args.createPix,
                      createSummaryCSVChallenge=args.createSummaryCSV,
                      csvLabel=args.csvLabel,
-                     featurName=args.featureName
-                     )
+                     featurName=args.featureName)
