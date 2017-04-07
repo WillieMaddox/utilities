@@ -28,16 +28,12 @@ def processRasterChip(rasterImage, rasterDescription, geojson, geojsonDescriptio
                                                createPix=True,
                                                clipOverlap=clipOverlap,
                                                noBlackSpace=True,
-                                               randomClip=-1
-                                               )
-
+                                               randomClip=-1)
     else:
         chipSummary = {'rasterSource': rasterImage,
                        'chipName': rasterImage,
                        'geoVectorName': geojson,
-                       'pixVectorName': ''
-                       }
-
+                       'pixVectorName': ''}
         chipSummaryList.append(chipSummary)
 
     return chipSummaryList
@@ -47,8 +43,8 @@ def processChipSummaryList(chipSummaryList, outputDirectory='', annotationType='
                            outputPixType='',
                            datasetName='spacenetV2',
                            folder_name='folder_name',
-                           bboxResize=1.0
-                           ):
+                           bboxResize=1.0):
+
     if outputPixType == '':
         convertTo8Bit = False
     else:
