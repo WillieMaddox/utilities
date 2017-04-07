@@ -1033,6 +1033,7 @@ def geoJsonToSBD(annotationName_cls, annotationName_inst, geoJson, rasterSource,
                  convertTo8Bit='',
                  outputPixType='',
                  outputFormat=''):
+
     # Print raster file name
     my_raster_source = rasterSource
     print("Raster directory : ", my_raster_source)
@@ -1041,12 +1042,12 @@ def geoJsonToSBD(annotationName_cls, annotationName_inst, geoJson, rasterSource,
     my_vector_source = geoJson
     print("Vector directory : ", my_vector_source)
 
-    # Call main functions to create label datafor cls
+    # Call main functions to create label data for cls
     my_cls_segmentation = createClassSegmentation(my_raster_source, my_vector_source, npDistFileName='', units='pixels')
     my_cls_boundaries = createClassBoundaries(my_raster_source, my_vector_source, npDistFileName='', units='pixels')
     my_cls_categories = createClassCategoriesPresent(my_vector_source)
 
-    # Call main functions to create label datafor inst
+    # Call main functions to create label data for inst
     my_inst_segmentation = createInstanceSegmentation(my_raster_source, my_vector_source)
     my_inst_boundaries = createInstanceBoundaries(my_raster_source, my_vector_source)
     my_inst_categories = createInstanceCategories(my_vector_source)
@@ -1081,7 +1082,6 @@ def geoJsonToSBD(annotationName_cls, annotationName_inst, geoJson, rasterSource,
              'width': srcRaster.RasterXSize,
              'height': srcRaster.RasterYSize,
              'depth': srcRaster.RasterCount,
-             'basename': os.path.splitext(os.path.basename(my_raster_source))[0]
-             }
+             'basename': os.path.splitext(os.path.basename(my_raster_source))[0]}
 
     return entry

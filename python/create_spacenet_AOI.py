@@ -83,17 +83,15 @@ if __name__ == '__main__':
         csvreader = csv.reader(csvfile, delimiter=',')
         for row in csvreader:
             print(row)
-            if row:
-                if not row[0].startswith("#"):
-                    srcImageryList.append([x.strip() for x in row])
+            if row and not row[0].startswith("#"):
+                srcImageryList.append([x.strip() for x in row])
 
     srcVectorFileList = []
     with open(args.geoJsonList, 'rb') as csvfile:
         csvreader = csv.reader(csvfile, delimiter=',')
         for row in csvreader:
-            if row:
-                if not row[0].startswith("#"):
-                    srcVectorFileList.append([x.strip() for x in row])
+            if row and not row[0].startswith("#"):
+                srcVectorFileList.append([x.strip() for x in row])
 
     lT.createAOIName(AOI_Name, AOI_Num,
                      srcImageryList,
