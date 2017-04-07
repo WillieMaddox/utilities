@@ -311,8 +311,7 @@ if __name__ == '__main__':
                                                     outputDirectory=fullPathAnnotationsDirectory,
                                                     imagePixSize=args.imgSizePix, clipOverlap=0.0, randomClip=False,
                                                     minpartialPerc=0.0,
-                                                    outputPrefix=''
-                                                    )
+                                                    outputPrefix='')
 
                 entryListTmp = processChipSummaryList(chipSummaryList,
                                                       outputDirectory=os.path.join(fullPathAnnotationsDirectory, 'annotations'),
@@ -321,8 +320,8 @@ if __name__ == '__main__':
                                                       outputPixType=outputDataType,
                                                       datasetName='spacenetV2',
                                                       folder_name='folder_name',
-                                                      bboxResize= args.boundingBoxResize
-                                       )
+                                                      bboxResize=args.boundingBoxResize)
+
                 print(entryListTmp)
                 entryList.extend(entryListTmp)
 
@@ -331,6 +330,5 @@ if __name__ == '__main__':
                                 outputDirectory=fullPathAnnotationsDirectory,
                                 annotationSummaryPrefix=args.annotationSummaryPrefix,
                                 annotationType=args.annotationType,
-                                shuffleList=True
-                                )
+                                shuffleList=True)
 
