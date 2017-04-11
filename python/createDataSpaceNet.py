@@ -130,7 +130,8 @@ def createTrainTestSplitSummary(entryList, trainTestSplit=0.8,
                 f.write('{} {} {}\n'.format(entry['rasterFileName'], entry['annotationName_cls'],
                                             entry['annotationName_inst']))
             else:
-                f.write('{} {}\n'.format(entry['rasterFileName'], entry['annotationName']))
+                # f.write('{} {}\n'.format(entry['rasterFileName'], entry['annotationName']))
+                f.write(entry['rasterFileName']+'\n')
 
     testFileName = os.path.join(outputDirectory, annotationSummaryPrefix + 'test.txt')
     testNameSizeFileName = os.path.join(outputDirectory, annotationSummaryPrefix + 'test_name_size.txt')
@@ -149,6 +150,7 @@ def createTrainTestSplitSummary(entryList, trainTestSplit=0.8,
 
     return trainValFileName, testFileName, testNameSizeFileName
 
+DATASET_MAPS = {'1': 'Rio', '2': 'Vegas', '3': 'Paris', '4': 'Shanghai', '5': 'Khartoum'}
 
 if __name__ == '__main__':
 
@@ -166,25 +168,40 @@ if __name__ == '__main__':
     #  --convertTo8Bit
     parser = argparse.ArgumentParser(description='Process SrcData for Region ComputerVision Dataset')
     parser.add_argument("srcSpaceNetFolder",
-                        help="location of Spacenet AOI Data i.e. '/path/to/AOI_2_Vegas")
+                        help="location of Spacenet AOI Data i.e. '/path/to/spacenet/folder/'"
+                             "for example if the Vegas source data is in '/path/to/spacenet/AOI_2_Vegas_Train/'"
+                             "then this argument should be '/path/to/spacenet/'")
+    parser.add_argument("--aoiList",
+                        choices=['1', '2', '3', '4', '5'],
+                        nargs='+',
+                        help="Choose 1 or more datasets from the following list:"
+                             "1.  Rio"
+                             "2.  Vegas"
+                             "3.  Paris"
+                             "4.  Shanghai"
+                             "5.  Khartoum"
+                             "NOTE: Rio must be processed alone. So, for example '--aoiList 1 3' won't work."
+                             "default is 3",
+                        default='3')
+
     parser.add_argument("--srcImageryDirectory",
                         help="The Folder to look for imagery in"
-                             "i.e. RGB-PanSharpen",
+                             "Default is 'RGB-PanSharpen'",
                         default='RGB-PanSharpen')
     parser.add_argument("--geoJsonDirectory",
                         help="name of geojson folder typedirectory to use"
-                             "i.e. 'buildings'",
+                             "Default is 'buildings'",
                         default='buildings')
     parser.add_argument("--outputDirectory",
                         help="Location To place processed Files"
                              "If not used output directory will be"
-                             "os.path.join(srcSpacenetFolder, 'annotations')",
-                        default='annotations')
+                             "os.path.join(srcSpaceNetFolder, 'output')",
+                        default='')
     parser.add_argument("--annotationSummaryPrefix",
                         help="Prefix to attach to trainval.txt and test.txt",
                         default='')
     parser.add_argument("--imgSizePix",
-                        help="set the dimensions of the square image in pixels"
+                        help="Set the dimensions of the square image in pixels"
                              "Default is -1, images are not modified",
                         type=int,
                         default=-1)
@@ -208,8 +225,8 @@ if __name__ == '__main__':
                              'Currently in SpaceNet V2 Building is only label',
                         type=str,
                         default='Buildings')
-    parser.add_argument("--spacenetVersion",
-                        help='Spacenet Version to process,  '
+    parser.add_argument("--spaceNetVersion",
+                        help='Spacenet Version to process, '
                              'Version 1 supports AOI_1_RIO, '
                              'Version 2 is AOI_2_Vegas-AOI_5_Khartoum',
                         type=int,
@@ -219,27 +236,29 @@ if __name__ == '__main__':
                         type=float,
                         default=0.8)
     parser.add_argument("--boundingBoxResize",
-                        help='Decimal Resize Annotation, i.e 0.8 = shrink annotation by 20 percent'
-                             'default is 1.0',
+                        help='Decimal Resize Annotation, i.e 0.8 = shrink annotation by 20 percent. '
+                             'Default is 1.0',
                         type=float,
                         default=1.0)
 
     args = parser.parse_args()
 
     entryList = []
-    srcSpaceNetDirectory = args.srcSpaceNetFolder
 
-    # listOfAOIs = [subdir for subdir in os.listdir(spaceNetDirectory) if
-    #              os.path.isdir(os.path.join(spaceNetDirectory, subdir))]
+    if len(args.aoiList) > 1 and '1' in args.aoiList:
+        print("Can't mix Rio with other datasets. Please verify your --aoiList command option.")
+        raise
 
-    listOfAOIs = [srcSpaceNetDirectory]
-    srcImageryDirectory = args.srcImageryDirectory  # 'PAN', 'MUL, 'MUL-PanSharpen', 'RGB-PanSharpen'
-    if args.spacenetVersion == 2:
+    spaceNetVersion = 1 if len(args.aoiList) == 1 and '1' in args.aoiList else 2
+
+    listOfAOIs = ['_'.join(['AOI', k, v, 'Train']) for k, v in DATASET_MAPS.iteritems() if k in args.aoiList]
+
+    if spaceNetVersion == 2:
         geojsonDirectory = os.path.join('geojson', args.geoJsonDirectory)  # 'geojson/buildings/'
-    elif args.spacenetVersion == 1:
+    elif spaceNetVersion == 1:
         geojsonDirectory = os.path.join('vectordata', 'geojson')
-    else:
-        print('Bad Spacenet Version Submitted,  Version {} is not supported'.foramt(args.spacenetVersion))
+    # else:
+    #     print('Bad Spacenet Version Submitted,  Version {} is not supported'.foramt(args.spacenetVersion))
 
     if args.convertTo8Bit:
         outputDataType = 'Byte'
@@ -248,22 +267,20 @@ if __name__ == '__main__':
         outputDataType = ''
         outputFileType = ''
 
-    if args.outputDirectory == 'annotations':
-        fullPathAnnotationsDirectory = os.path.join(srcSpaceNetDirectory, 'annotations')
+    if args.outputDirectory == '':
+        outputDirectory = os.path.join(args.srcSpaceNetFolder, 'output')
     else:
-        fullPathAnnotationsDirectory = args.outputDirectory
+        outputDirectory = args.outputDirectory
+
+    # Create Output/Annotations directory
+    fullPathAnnotationsDirectory = os.path.join(outputDirectory, 'annotations')
+    if not os.path.exists(fullPathAnnotationsDirectory):
+        os.makedirs(fullPathAnnotationsDirectory)
 
     for aoiSubDir in listOfAOIs:
-        fullPathSubDir = os.path.join(srcSpaceNetDirectory, aoiSubDir)
+        fullPathSubDir = os.path.join(args.srcSpaceNetFolder, aoiSubDir)
 
-        # Create Annotations directory
-        # fullPathAnnotationsDirectory = os.path.join(fullPathSubDir, annotationsDirectory)
-        if not os.path.exists(fullPathAnnotationsDirectory):
-            os.makedirs(fullPathAnnotationsDirectory)
-        if not os.path.exists(os.path.join(fullPathAnnotationsDirectory, 'annotations')):
-            os.makedirs(os.path.join(fullPathAnnotationsDirectory, 'annotations'))
-
-        fullPathImageDirectory = os.path.join(fullPathSubDir, srcImageryDirectory)
+        fullPathImageDirectory = os.path.join(fullPathSubDir, args.srcImageryDirectory)
         fullPathGeoJsonDirectory = os.path.join(fullPathSubDir, geojsonDirectory)
 
         listofRaster = sorted(glob.glob(os.path.join(fullPathImageDirectory, '*.tif')))
@@ -271,21 +288,23 @@ if __name__ == '__main__':
 
         print('fullpathImageDirectory = {}'.format(fullPathImageDirectory))
         print('fullpathGeoJsonDirectory = {}'.format(fullPathGeoJsonDirectory))
+
         if len(listofRaster) != len(listofgeojson):
             print('Error lists do not match fix source errors')
             break
         else:
             for rasterImage, geoJson in zip(listofRaster, listofgeojson):
-                chipSummaryList = processRasterChip(rasterImage, srcImageryDirectory,
+                chipSummaryList = processRasterChip(rasterImage, args.srcImageryDirectory,
                                                     geoJson, args.geoJsonDirectory,
-                                                    outputDirectory=fullPathAnnotationsDirectory,
-                                                    imagePixSize=args.imgSizePix, clipOverlap=0.0, randomClip=False,
+                                                    outputDirectory=outputDirectory,
+                                                    imagePixSize=args.imgSizePix,
+                                                    clipOverlap=0.0,
+                                                    randomClip=False,
                                                     minpartialPerc=0.0,
                                                     outputPrefix='')
 
                 entryListTmp = processChipSummaryList(chipSummaryList,
-                                                      outputDirectory=os.path.join(fullPathAnnotationsDirectory,
-                                                                                   'annotations'),
+                                                      outputDirectory=fullPathAnnotationsDirectory,
                                                       annotationType=args.annotationType,
                                                       outputFormat=outputFileType,
                                                       outputPixType=outputDataType,
@@ -298,7 +317,7 @@ if __name__ == '__main__':
 
     createTrainTestSplitSummary(entryList,
                                 trainTestSplit=args.trainTestSplit,
-                                outputDirectory=fullPathAnnotationsDirectory,
+                                outputDirectory=outputDirectory,
                                 annotationSummaryPrefix=args.annotationSummaryPrefix,
                                 annotationType=args.annotationType,
                                 shuffleList=True)

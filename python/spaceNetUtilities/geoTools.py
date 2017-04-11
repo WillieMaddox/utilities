@@ -628,7 +628,7 @@ def create_rtree_from_poly(poly_list):
 
 
 def search_rtree(test_building, index):
-    # input test poly ogr.Geometry  and rtree index
+    # input test poly ogr.Geometry and rtree index
     if test_building.GetGeometryName() == 'POLYGON' or test_building.GetGeometryName() == 'MULTIPOLYGON':
         fidlist = index.intersection(test_building.GetEnvelope())
     else:
@@ -770,7 +770,7 @@ def clipShapeFile(shapeSrc, outputFileName, polyToCut, minpartialPerc=0.0, shape
         outFeatureDebug.SetGeometry(polyToCut)
         outLayerDebug.CreateFeature(outFeatureDebug)
 
-    outDataSource = outDriver.CreateDataSource(outGeoJSon)
+    outDataSource = outDriver.CreateDataSource(outGeoJSon)  # This line creates the (empty) geojson file.
     outLayer = outDataSource.CreateLayer("groundTruth", source_srs, geom_type=ogr.wkbPolygon)
     # Add input Layer Fields to the output Layer
     inLayerDefn = source_layer.GetLayerDefn()
@@ -781,12 +781,15 @@ def clipShapeFile(shapeSrc, outputFileName, polyToCut, minpartialPerc=0.0, shape
     outLayer.CreateField(ogr.FieldDefn("partialDec", ogr.OFTReal))
     outLayerDefn = outLayer.GetLayerDefn()
     source_layer.SetSpatialFilter(polyToCut)
+    inFeaturesFound = False
     for inFeature in source_layer:
 
         outFeature = ogr.Feature(outLayerDefn)
 
         for i in range(0, inLayerDefn.GetFieldCount()):
             outFeature.SetField(inLayerDefn.GetFieldDefn(i).GetNameRef(), inFeature.GetField(i))
+
+        inFeaturesFound = True
 
         geom = inFeature.GetGeometryRef()
         geomNew = geom.Intersection(polyToCut)
@@ -797,20 +800,10 @@ def clipShapeFile(shapeSrc, outputFileName, polyToCut, minpartialPerc=0.0, shape
                 outFeature.SetField("partialDec", 1)
                 outFeature.SetField("partialBuilding", 1)
             else:
-
-                if geom.GetArea() > 0:
-                    partialDec = geomNew.GetArea() / geom.GetArea()
-                else:
-                    partialDec = 0
-
+                partialDec = geomNew.GetArea() / geom.GetArea() if geom.GetArea() > 0 else 0
+                partialBuilding = 1 if geom.GetArea() != geomNew.GetArea() else 0
                 outFeature.SetField("partialDec", partialDec)
-
-                if geom.GetArea() == geomNew.GetArea():
-                    outFeature.SetField("partialBuilding", 0)
-                else:
-                    outFeature.SetField("partialBuilding", 1)
-
-
+                outFeature.SetField("partialBuilding", partialBuilding)
         else:
             outFeature.SetField("partialBuilding", 1)
             outFeature.SetField("partialBuilding", 1)
@@ -819,6 +812,8 @@ def clipShapeFile(shapeSrc, outputFileName, polyToCut, minpartialPerc=0.0, shape
         if partialDec >= minpartialPerc:
             outLayer.CreateFeature(outFeature)
             # print ("AddFeature")
+
+    return inFeaturesFound
 
 
 def cutChipFromMosaic(rasterFileList, shapeFileSrcList, outlineSrc='', outputDirectory='', outputPrefix='clip_',
@@ -956,7 +951,8 @@ def cutChipFromMosaic(rasterFileList, shapeFileSrcList, outlineSrc='', outputDir
                                              rasterPolyEnvelope=poly,
                                              baseName=baseName,
                                              imgId=imgId)
-                    chipSummaryList.append(chipSummary)
+                    if chipSummary:
+                        chipSummaryList.append(chipSummary)
 
     return chipSummaryList
 
@@ -990,30 +986,14 @@ def createclip(outputDirectory, rasterFileList, shapeSrcList,
     for rasterFile in rasterFileList:
         if className == '':
             if imgId == -1:
-                chipNameList.append(outputPrefix + rasterFile[1] +
-                                    "_" + baseName + "_{}_{}.tif".format(minXCut, minYCut))
+                chipNameList.append(outputPrefix + rasterFile[1] + "_" + baseName + "_{}_{}.tif".format(minXCut, minYCut))
             else:
-                chipNameList.append(outputPrefix + rasterFile[1] +
-                                    "_" + baseName + "_img{}.tif".format(imgId))
+                chipNameList.append(outputPrefix + rasterFile[1] + "_" + baseName + "_img{}.tif".format(imgId))
         else:
             if imgId == -1:
-                chipNameList.append(outputPrefix + className + "_" +
-                                    rasterFile[1] + "_" + baseName + "_{}_{}.tif".format(minXCut, minYCut))
+                chipNameList.append(outputPrefix + className + "_" + rasterFile[1] + "_" + baseName + "_{}_{}.tif".format(minXCut, minYCut))
             else:
-                chipNameList.append(outputPrefix + className + '_' +
-                                    rasterFile[1] + "_" + baseName + "_img{}.tif".format(imgId))
-
-    # clip raster
-
-    for chipName, rasterFile in zip(chipNameList, rasterFileList):
-        outputFileName = os.path.join(outputDirectory, rasterFile[1], className, chipName)
-        ## Clip Image
-        print(rasterFile)
-        print(outputFileName)
-        subprocess.call(["gdalwarp", "-te", "{}".format(minXCut), "{}".format(minYCut), "{}".format(maxXCut),
-                         "{}".format(maxYCut),
-                         '-co', 'PHOTOMETRIC=rgb',
-                         rasterFile[0], outputFileName])
+                chipNameList.append(outputPrefix + className + '_' + rasterFile[1] + "_" + baseName + "_img{}.tif".format(imgId))
 
     baseLayerRasterName = os.path.join(outputDirectory, rasterFileList[0][1], className, chipNameList[0])
     outputFileName = os.path.join(outputDirectory, rasterFileList[0][1], chipNameList[0])
@@ -1029,21 +1009,29 @@ def createclip(outputDirectory, rasterFileList, shapeSrcList,
     # Interate thorough Vector Src List
     for shapeSrc in shapeSrcList:
         if imgId == -1:
-            outGeoJson = outputPrefix + shapeSrc[1] + \
-                         "_" + baseName + "_{}_{}.geojson".format(minXCut, minYCut)
+            outGeoJson = outputPrefix + shapeSrc[1] + "_" + baseName + "_{}_{}.geojson".format(minXCut, minYCut)
         else:
-            outGeoJson = outputPrefix + shapeSrc[1] + \
-                         "_" + baseName + "_img{}.geojson".format(imgId)
-
+            outGeoJson = outputPrefix + shapeSrc[1] + "_" + baseName + "_img{}.geojson".format(imgId)
         outGeoJson = os.path.join(outputDirectory, 'geojson', shapeSrc[1], outGeoJson)
+        if not clipShapeFile(shapeSrc[0], outGeoJson, polyVectorCut, minpartialPerc=minpartialPerc):
+            subprocess.call(["rm", "-f", outGeoJson])
+            return False
 
-        clipShapeFile(shapeSrc[0], outGeoJson, polyVectorCut, minpartialPerc=minpartialPerc)
+    # clip raster
+    for chipName, rasterFile in zip(chipNameList, rasterFileList):
+        outputFileName = os.path.join(outputDirectory, rasterFile[1], className, chipName)
+        ## Clip Image
+        print(rasterFile)
+        print(outputFileName)
+        subprocess.call(["gdalwarp",
+                         "-te", "{}".format(minXCut), "{}".format(minYCut), "{}".format(maxXCut), "{}".format(maxYCut),
+                         '-co', 'PHOTOMETRIC=rgb',
+                         rasterFile[0], outputFileName])
 
     chipSummary = {'rasterSource': baseLayerRasterName,
                    'chipName': chipNameList[0],
                    'geoVectorName': outGeoJson,
-                   'pixVectorName': ''
-                   }
+                   'pixVectorName': ''}
 
     return chipSummary
 

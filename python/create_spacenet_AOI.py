@@ -22,8 +22,7 @@ if __name__ == '__main__':
                              "os.path.join(os.getcwd(), processed)",
                         default='')
     parser.add_argument("--imgSizeM",
-                        help="set the dimensions of the square image in meters  "
-                             "Default is 200m",
+                        help="Set the dimensions of the square image in meters. Default is 200m",
                         type=int,
                         default=200)
     parser.add_argument("--AOI_Name",
@@ -62,11 +61,7 @@ if __name__ == '__main__':
 
     AOI_Name = args.AOI_Name
     AOI_Num = args.AOI_Num
-    srcOutline = args.srcOutline
-    clipImageryToAOI = True
-    if srcOutline == '':
-        clipImageryToAOI = False
-
+    clipImageryToAOI = args.srcOutline != ''
     outputDirectory = args.outputDirectory
 
     if outputDirectory == '':
@@ -95,7 +90,7 @@ if __name__ == '__main__':
 
     lT.createAOIName(AOI_Name, AOI_Num,
                      srcImageryList,
-                     srcOutline,
+                     args.srcOutline,
                      srcVectorFileList,
                      outputDirectory,
                      clipImageryToAOI=clipImageryToAOI,
