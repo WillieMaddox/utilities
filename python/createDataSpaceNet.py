@@ -17,7 +17,7 @@ def processRasterChip(rasterImage, rasterDescription, geojson, geojsonDescriptio
         rasterFileList = [[rasterImage, rasterDescription]]
         shapeFileSrcList = [[geojson, geojsonDescription]]
         # cut image to size
-        print(rasterFileList)
+        # print(rasterFileList)
         chipSummaryList = gT.cutChipFromMosaic(rasterFileList,
                                                shapeFileSrcList,
                                                outputDirectory=outputDirectory,
@@ -127,26 +127,25 @@ def createTrainTestSplitSummary(entryList, trainTestSplit=0.8,
     with open(trainValFileName, 'w') as f:
         for entry in trainvalList:
             if annotationType == 'SBD':
-                f.write('{} {} {}\n'.format(entry['rasterFileName'], entry['annotationName_cls'],
-                                            entry['annotationName_inst']))
+                f.write('{} {} {}\n'.format(entry['rasterFileName'], entry['annotationName_cls'], entry['annotationName_inst']))
+            elif annotationType == 'PASCALVOC2012':
+                f.write('{} {}\n'.format(entry['rasterFileName'], entry['annotationName']))
             else:
-                # f.write('{} {}\n'.format(entry['rasterFileName'], entry['annotationName']))
                 f.write(entry['rasterFileName']+'\n')
 
     testFileName = os.path.join(outputDirectory, annotationSummaryPrefix + 'test.txt')
     testNameSizeFileName = os.path.join(outputDirectory, annotationSummaryPrefix + 'test_name_size.txt')
     print('creating test.txt {} entries'.format(len(testList)))
     print('Writing to Test List to file: {}'.format(testFileName))
-    with open(testFileName, 'w') as f, \
-            open(testNameSizeFileName, 'w') as fname:
+    with open(testFileName, 'w') as f, open(testNameSizeFileName, 'w') as fname:
         for entry in testList:
+            fname.write('{} {} {}\n'.format(entry['basename'], entry['width'], entry['height']))
             if annotationType == 'SBD':
-                f.write('{} {} {}\n'.format(entry['rasterFileName'], entry['annotationName_cls'],
-                                            entry['annotationName_inst']))
-                fname.write('{} {} {}\n'.format(entry['basename'], entry['width'], entry['height']))
-            else:
+                f.write('{} {} {}\n'.format(entry['rasterFileName'], entry['annotationName_cls'], entry['annotationName_inst']))
+            elif annotationType == 'PASCALVOC2012':
                 f.write('{} {}\n'.format(entry['rasterFileName'], entry['annotationName']))
-                fname.write('{} {} {}\n'.format(entry['basename'], entry['width'], entry['height']))
+            else:
+                f.write(entry['rasterFileName']+'\n')
 
     return trainValFileName, testFileName, testNameSizeFileName
 
@@ -183,7 +182,6 @@ if __name__ == '__main__':
                              "NOTE: Rio must be processed alone. So, for example '--aoiList 1 3' won't work."
                              "default is 3",
                         default='3')
-
     parser.add_argument("--srcImageryDirectory",
                         help="The Folder to look for imagery in"
                              "Default is 'RGB-PanSharpen'",
@@ -312,7 +310,7 @@ if __name__ == '__main__':
                                                       folder_name='folder_name',
                                                       bboxResize=args.boundingBoxResize)
 
-                print(entryListTmp)
+                # print(entryListTmp)
                 entryList.extend(entryListTmp)
 
     createTrainTestSplitSummary(entryList,

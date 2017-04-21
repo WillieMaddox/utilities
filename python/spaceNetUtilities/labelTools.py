@@ -288,19 +288,15 @@ def createCSVSummaryFile(chipSummaryList, outputFileName, rasterChipDirectory=''
                 for building in buildingList:
                     imageId = os.path.basename(building['ImageId']).replace(replaceImageID, "")
                     if createProposalsFile:
-                        writerTotal.writerow([imageId, building['BuildingId'],
-                                              building['polyPix'], 1])
+                        writerTotal.writerow([imageId, building['BuildingId'], building['polyPix'], 1])
                     else:
-                        writerTotal.writerow([imageId, building['BuildingId'],
-                                              building['polyPix'], building['polyGeo']])
+                        writerTotal.writerow([imageId, building['BuildingId'], building['polyPix'], building['polyGeo']])
             else:
                 imageId = os.path.splitext(os.path.basename(chipName))[0].replace(replaceImageID, "")
                 if createProposalsFile:
-                    writerTotal.writerow([imageId, -1,
-                                          'POLYGON EMPTY', 1])
+                    writerTotal.writerow([imageId, -1, 'POLYGON EMPTY', 1])
                 else:
-                    writerTotal.writerow([imageId, -1,
-                                          'POLYGON EMPTY', 'POLYGON EMPTY'])
+                    writerTotal.writerow([imageId, -1, 'POLYGON EMPTY', 'POLYGON EMPTY'])
 
 
 def createCSVSummaryFileFromJsonList(geoJsonList, outputFileName, chipnameList=[],
@@ -320,13 +316,11 @@ def createCSVSummaryFileFromJsonList(geoJsonList, outputFileName, chipnameList=[
 
         for geoVectorName, chipName in zip(geoJsonList, chipnameList):
             try:
-                buildingList = gT.convert_wgs84geojson_to_pixgeojson(geoVectorName, '',
-                                                                     image_id=chipName)
+                buildingList = gT.convert_wgs84geojson_to_pixgeojson(geoVectorName, '', image_id=chipName)
                 if len(buildingList) > 0:
                     for building in buildingList:
                         imageId = os.path.basename(building['ImageId']).replace(replaceImageID, "")
-                        writerTotal.writerow([imageId, building['BuildingId'],
-                                              building['polyPix'], building['polyGeo']])
+                        writerTotal.writerow([imageId, building['BuildingId'], building['polyPix'], building['polyGeo']])
                 else:
                     imageId = os.path.splitext(os.path.basename(chipName))[0].replace(replaceImageID, "")
                     writerTotal.writerow([imageId, -1, '"POLYGON EMPTY"', '"POLYGON EMPTY"'])
@@ -494,10 +488,6 @@ def geoJsonToPASCALVOC2012(xmlFileName, geoJson, rasterImageName, im_id='',
     # 'polyGeo': ogr.CreateGeometryFromWkt(geom.ExportToWkt()),
     # 'polyPix': ogr.CreateGeometryFromWkt('POLYGON EMPTY')
     # })
-
-
-
-
 
     srcRaster = gdal.Open(rasterImageName)
     outputRaster = rasterImageName
@@ -719,11 +709,14 @@ def geoJsonToDARKNET(xmlFileName, geoJson, rasterImageName, im_id='',
                      outputFormat='GTiff',
                      bboxResize=1.0):
     xmlFileName = xmlFileName.replace(".xml", ".txt")
-    print("creating {}".format(xmlFileName))
+    # print("creating {}".format(xmlFileName))
 
-    buildingList = gT.convert_wgs84geojson_to_pixgeojson(geoJson, rasterImageName, image_id=[], pixelgeojson=[],
+    buildingList = gT.convert_wgs84geojson_to_pixgeojson(geoJson, rasterImageName,
+                                                         image_id=[],
+                                                         pixelgeojson=[],
                                                          only_polygons=True,
-                                                         breakMultiPolygonGeo=True, pixPrecision=2)
+                                                         breakMultiPolygonGeo=True,
+                                                         pixPrecision=4)
     #                        buildinglist.append({'ImageId': image_id,
     # 'BuildingId': building_id,
     # 'polyGeo': ogr.CreateGeometryFromWkt(geom.ExportToWkt()),
@@ -759,7 +752,7 @@ def geoJsonToDARKNET(xmlFileName, geoJson, rasterImageName, im_id='',
 
         outputRaster = outputRaster.replace('_img', '_8bit_img')
         cmd.append(outputRaster)
-        print(cmd)
+        # print(cmd)
         subprocess.call(cmd)
 
     with open(xmlFileName, 'w') as f:
@@ -986,7 +979,6 @@ def createInstanceSegmentation(rasterSrc, vectorSrc):
     json_data = open(vectorSrc)
     data = json.load(json_data)
     num_features = len(data['features'])
-
     cell_array = np.zeros((num_features,), dtype=np.object)
     for i in range(num_features):
         cell_array[i] = createSegmentationByFeatureIndex(i, rasterSrc, vectorSrc, npDistFileName='', units='pixels')
@@ -1010,8 +1002,7 @@ def createInstanceBoundaries(rasterSrc, vectorSrc):
 
     cell_array = np.zeros((num_features,), dtype=np.object)
     for i in range(num_features):
-        full_boundary_matrix = createBoundariesByFeatureIndex(i, rasterSrc, vectorSrc, npDistFileName='',
-                                                              units='pixels')
+        full_boundary_matrix = createBoundariesByFeatureIndex(i, rasterSrc, vectorSrc, npDistFileName='', units='pixels')
         cell_array[i] = csr_matrix(full_boundary_matrix)
     return cell_array
 

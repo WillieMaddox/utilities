@@ -856,7 +856,7 @@ def cutChipFromMosaic(rasterFileList, shapeFileSrcList, outlineSrc='', outputDir
 
     shapeSrcList = []
     for shapeFileSrc in shapeFileSrcList:
-        print(shapeFileSrc[1])
+        # print(shapeFileSrc[1])
         shapeSrcList.append([ogr.Open(shapeFileSrc[0], 0), shapeFileSrc[1]])
 
     if outlineSrc == '':
@@ -875,19 +875,20 @@ def cutChipFromMosaic(rasterFileList, shapeFileSrcList, outlineSrc='', outputDir
             os.makedirs(os.path.join(outputDirectory, rasterFile[1]))
     idx = 0
     if createPix:
-        print(geoTrans)
+        # print(geoTrans)
         clipSizeMX = clipSizeMX * geoTrans[1]
         clipSizeMY = abs(clipSizeMY * geoTrans[5])
 
     xInterval = np.arange(minX, maxX, clipSizeMX * (1.0 - clipOverlap))
-    print('minY = {}'.format(minY))
-    print('maxY = {}'.format(maxY))
-    print('clipsizeMX ={}'.format(clipSizeMX))
-    print('clipsizeMY ={}'.format(clipSizeMY))
-
     yInterval = np.arange(minY, maxY, clipSizeMY * (1.0 - clipOverlap))
-    print(xInterval)
-    print(yInterval)
+
+    # print('minY = {}'.format(minY))
+    # print('maxY = {}'.format(maxY))
+    # print('clipsizeMX ={}'.format(clipSizeMX))
+    # print('clipsizeMY ={}'.format(clipSizeMY))
+    # print(xInterval)
+    # print(yInterval)
+
     for llX in xInterval:
         if parrallelProcess:
             for llY in yInterval:
@@ -913,7 +914,6 @@ def cutChipFromMosaic(rasterFileList, shapeFileSrcList, outlineSrc='', outputDir
                     polyCut.Transform(transform_UTM_To_WGS84)
                 ## add debug line do cuts
                 if (polyCut).Intersects(geomOutline):
-                    print("Do it.")
                     # envCut = polyCut.GetEnvelope()
                     # minXCut = envCut[0]
                     # minYCut = envCut[2]
@@ -1021,8 +1021,8 @@ def createclip(outputDirectory, rasterFileList, shapeSrcList,
     for chipName, rasterFile in zip(chipNameList, rasterFileList):
         outputFileName = os.path.join(outputDirectory, rasterFile[1], className, chipName)
         ## Clip Image
-        print(rasterFile)
-        print(outputFileName)
+        # print(rasterFile)
+        # print(outputFileName)
         subprocess.call(["gdalwarp",
                          "-te", "{}".format(minXCut), "{}".format(minYCut), "{}".format(maxXCut), "{}".format(maxYCut),
                          '-co', 'PHOTOMETRIC=rgb',
