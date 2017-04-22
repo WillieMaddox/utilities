@@ -695,7 +695,7 @@ def convertPixDimensionToPercent(size, box):
     w = w0 * dw
     h = h0 * dh
 
-    return (x, y, w, h)
+    return x, y, w, h
 
 
 def geoJsonToDARKNET(xmlFileName, geoJson, rasterImageName, im_id='',
