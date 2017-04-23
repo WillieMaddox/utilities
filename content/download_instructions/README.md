@@ -25,28 +25,6 @@ s3://spacenet-dataset/
         |    -- 8-Band.tar.gz # 8band Raster Mosaic for Rio De Jenairo area (2784 sq KM) collected by WorldView-2
          -- vectorData
             |-- Rio_BuildingLabels.tar.gz # Source Dataset that contains Building the building foot prints traced from the Mosaic
-            |-- Rio_HGIS_Metro.gdb.tar.gz  # Source Point of Interest Dataset in GeoDatabase Format.  Best if Used with ESRI
-             -- Rio_HGIS_Metro_extract.tar # Source Point of Interest Dataset in GeoJSON with associated .jpg.  Easy to Use without ESRI toolset
--- AOI_1_Rio
-    |-- processedData
-    |   -- processedBuildingLabels.tar.gz  # Compressed 3band and 8band 200m x 200m tiles with associated building foot print labels                                 # This dataset is the Training Dataset for the first Top Coder Competition
-    `-- srcData
-        |-- rasterData
-        |   |-- 3-Band.tar.gz # 3band (RGB) Raster Mosaic for Rio De Jenairo area (2784 sq KM) collected by WorldView-2
-        |    -- 8-Band.tar.gz # 8band Raster Mosaic for Rio De Jenairo area (2784 sq KM) collected by WorldView-2
-         -- vectorData
-            |-- Rio_BuildingLabels.tar.gz # Source Dataset that contains Building the building foot prints traced from the Mosaic
-            |-- Rio_HGIS_Metro.gdb.tar.gz # Source Point of Interest Dataset in GeoDatabase Format.  Best if Used with ESRI
-             -- Rio_HGIS_Metro_extract.tar # Source Point of Interest Dataset in GeoJSON with associated .jpg.  Easy to Use without ESRI toolset
--- AOI_1_Rio
-    |-- processedData
-    |   -- processedBuildingLabels.tar.gz  # Compressed 3band and 8band 200m x 200m tiles with associated building foot print labels                                 # This dataset is the Training Dataset for the first Top Coder Competition
-    `-- srcData
-        |-- rasterData
-        |   |-- 3-Band.tar.gz # 3band (RGB) Raster Mosaic for Rio De Jenairo area (2784 sq KM) collected by WorldView-2
-        |    -- 8-Band.tar.gz # 8band Raster Mosaic for Rio De Jenairo area (2784 sq KM) collected by WorldView-2
-         -- vectorData
-            |-- Rio_BuildingLabels.tar.gz # Source Dataset that contains Building the building foot prints traced from the Mosaic
             |-- Rio_HGIS_Metro.gdb.tar.gz # Source Point of Interest Dataset in GeoDatabase Format.  Best if Used with ESRI
              -- Rio_HGIS_Metro_extract.tar # Source Point of Interest Dataset in GeoJSON with associated .jpg.  Easy to Use without ESRI toolset
 ```
