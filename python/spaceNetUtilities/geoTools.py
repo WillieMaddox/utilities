@@ -189,7 +189,7 @@ def latlon_to_pixel(lat, lon, input_raster='', targetsr='', geom_transform=''):
     x_pix = (geom.GetPoint()[0] - x_origin) / pixel_width
     y_pix = (geom.GetPoint()[1] - y_origin) / pixel_height
 
-    return (x_pix, y_pix)
+    return x_pix, y_pix
 
 
 def returnBoundBox(xOff, yOff, pixDim, inputRaster, targetSR='', pixelSpace=False):
@@ -267,7 +267,7 @@ def createBoxFromLine(tmpGeom, ratio=1, halfWidth=-999, transformRequired=True, 
         tmpGeom.Transform(transform_UTM_To_WGS84)
         polyGeom.Transform(transform_UTM_To_WGS84)
 
-    return (polyGeom, areaM, angRad, lengthM)
+    return polyGeom, areaM, angRad, lengthM
 
 
 def pixel_to_geo_coord(xPix, yPix, inputRaster, sourceSR='', geomTransform='', targetSR=''):
@@ -308,7 +308,7 @@ def pixel_to_geo_coord(xPix, yPix, inputRaster, sourceSR='', geomTransform='', t
         coord_trans = osr.CoordinateTransformation(sourceSR, targetSR)
         geom.Transform(coord_trans)
 
-    return (geom.GetX(), geom.GetY())
+    return geom.GetX(), geom.GetY()
 
 
 def geo_polygon_to_pixel_polygon_WKT(geom, inputRaster, targetSR, geomTransform, breakMultiPolygonGeo=True,
@@ -652,7 +652,7 @@ def get_envelope(poly):
 
 
 def utm_getZone(longitude):
-    return (int(1 + (longitude + 180.0) / 6.0))
+    return int(1 + (longitude + 180.0) / 6.0)
 
 
 def utm_isNorthern(latitude):
