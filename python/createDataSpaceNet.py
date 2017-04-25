@@ -39,10 +39,13 @@ def processRasterChip(rasterImage, rasterDescription, geojson, geojsonDescriptio
     return chipSummaryList
 
 
-def processChipSummaryList(chipSummaryList, outputDirectory='', annotationType='PASCALVOC2012', outputFormat='GTiff',
-                           outputPixType='',
-                           datasetName='spacenetV2',
+def processChipSummaryList(chipSummaryList,
+                           outputDirectory='',
                            folder_name='folder_name',
+                           annotationType='PASCALVOC2012',
+                           datasetName='spacenetV2',
+                           outputPixType='',
+                           outputFormat='GTiff',
                            bboxResize=1.0):
 
     if outputPixType == '':

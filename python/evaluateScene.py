@@ -89,8 +89,8 @@ def evaluateSpaceNetSolution(summaryTruthFile, summaryProposalFile, resultsOutpu
         prop_polys = gT.import_summary_geojson(test_fp)
         polyFlag = 'poly'
     else:
-        sol_polys = gT.readwktcsv(truth_fp, removeNoBuildings=False)
-        prop_polys = gT.readwktcsv(test_fp, groundTruthFile=False)
+        sol_polys = gT.read_wkt_csv(truth_fp, removeNoBuildings=False)
+        prop_polys = gT.read_wkt_csv(test_fp, groundTruthFile=False)
         polyFlag = 'polyPix'
 
     t1 = time.time()

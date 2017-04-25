@@ -280,9 +280,9 @@ def createCSVSummaryFile(chipSummaryList, outputFileName, rasterChipDirectory=''
             print(chipName)
             geoVectorName = chipSummary['geoVectorName']
             # pixVectorName = chipSummary['pixVectorName']
-            buildingList = gT.convert_wgs84geojson_to_pixgeojson(geoVectorName,
-                                                                 os.path.join(rasterChipDirectory, chipName),
-                                                                 pixPrecision=pixPrecision)
+            buildingList = gT.convert_wgs84_geojson_to_pixel_geojson(geoVectorName,
+                                                                     os.path.join(rasterChipDirectory, chipName),
+                                                                     pixPrecision=pixPrecision)
 
             if len(buildingList) > 0:
                 for building in buildingList:
@@ -316,7 +316,7 @@ def createCSVSummaryFileFromJsonList(geoJsonList, outputFileName, chipnameList=[
 
         for geoVectorName, chipName in zip(geoJsonList, chipnameList):
             try:
-                buildingList = gT.convert_wgs84geojson_to_pixgeojson(geoVectorName, '', image_id=chipName)
+                buildingList = gT.convert_wgs84_geojson_to_pixel_geojson(geoVectorName, '', image_id=chipName)
                 if len(buildingList) > 0:
                     for building in buildingList:
                         imageId = os.path.basename(building['ImageId']).replace(replaceImageID, "")
@@ -447,16 +447,22 @@ def createAOIName(AOI_Name, AOI_Num,
         # i.e rasterFileList = [['/path/to/3band_AOI_1.tif, '3band'],
         #                       ['/path/to/8band_AOI_1.tif, '8band']
         #                        ]
-    chipSummaryList = gT.cutChipFromMosaic(srcImageryList, srcVectorFileList, outlineSrc=srcVectorAOIFile,
-                                           outputDirectory=outputDirectory, outputPrefix='',
-                                           clipSizeMX=windowSizeMeters, clipSizeMY=windowSizeMeters,
+    chipSummaryList = gT.cutChipFromMosaic(srcImageryList, srcVectorFileList,
+                                           outlineSrc=srcVectorAOIFile,
+                                           outputDirectory=outputDirectory,
+                                           outputPrefix='',
+                                           clipSizeMX=windowSizeMeters,
+                                           clipSizeMY=windowSizeMeters,
                                            clipOverlap=clipOverlap,
-                                           minpartialPerc=minpartialPerc, createPix=createPix,
+                                           minpartialPerc=minpartialPerc,
+                                           createPix=createPix,
                                            baseName='AOI_{}_{}'.format(AOI_Num, AOI_Name),
                                            imgIdStart=1)
 
     outputCSVSummaryName = 'AOI_{}_{}_{}_{}_solutions.csv'.format(AOI_Num, AOI_Name, csvLabel, featureName)
-    createCSVSummaryFile(chipSummaryList, outputCSVSummaryName, rasterChipDirectory='', replaceImageID='',
+    createCSVSummaryFile(chipSummaryList, outputCSVSummaryName,
+                         rasterChipDirectory='',
+                         replaceImageID='',
                          createProposalsFile=False,
                          pixPrecision=2)
 
@@ -469,7 +475,8 @@ def prettify(elem):
     return reparsed.toprettyxml(indent="  ")
 
 
-def geoJsonToPASCALVOC2012(xmlFileName, geoJson, rasterImageName, im_id='',
+def geoJsonToPASCALVOC2012(xmlFileName, geoJson, rasterImageName,
+                           im_id='',
                            dataset='SpaceNet',
                            folder_name='spacenet',
                            annotationStyle='PASCAL VOC2012',
@@ -479,15 +486,19 @@ def geoJsonToPASCALVOC2012(xmlFileName, geoJson, rasterImageName, im_id='',
                            outputPixType='Byte',
                            outputFormat='GTiff',
                            bboxResize=1.0):
+
     print("creating {}".format(xmlFileName))
-    buildingList = gT.convert_wgs84geojson_to_pixgeojson(geoJson, rasterImageName, image_id=[], pixelgeojson=[],
-                                                         only_polygons=True,
-                                                         breakMultiPolygonGeo=True, pixPrecision=2)
-    #                        buildinglist.append({'ImageId': image_id,
-    # 'BuildingId': building_id,
-    # 'polyGeo': ogr.CreateGeometryFromWkt(geom.ExportToWkt()),
-    # 'polyPix': ogr.CreateGeometryFromWkt('POLYGON EMPTY')
-    # })
+    buildingList = gT.convert_wgs84_geojson_to_pixel_geojson(geoJson, rasterImageName,
+                                                             image_id=[],
+                                                             pixelgeojson=[],
+                                                             only_polygons=True,
+                                                             breakMultiPolygonGeo=True,
+                                                             pixPrecision=2)
+
+    # buildinglist.append({'ImageId': image_id,
+    #                      'BuildingId': building_id,
+    #                      'polyGeo': ogr.CreateGeometryFromWkt(geom.ExportToWkt()),
+    #                      'polyPix': ogr.CreateGeometryFromWkt('POLYGON EMPTY')})
 
     srcRaster = gdal.Open(rasterImageName)
     outputRaster = rasterImageName
@@ -682,7 +693,7 @@ def geoJsonToPASCALVOC2012(xmlFileName, geoJson, rasterImageName, im_id='',
     return entry
 
 
-def convertPixDimensionToPercent(size, box):
+def convert_pix_dimension_to_percent(size, box):
     '''Input = image size: (w,h), box: [x0, x1, y0, y1]'''
     dw = 1. / size[0]
     dh = 1. / size[1]
@@ -698,7 +709,8 @@ def convertPixDimensionToPercent(size, box):
     return x, y, w, h
 
 
-def geoJsonToDARKNET(xmlFileName, geoJson, rasterImageName, im_id='',
+def geoJsonToDARKNET(xmlFileName, geoJson, rasterImageName,
+                     im_id='',
                      dataset='SpaceNet',
                      folder_name='spacenet',
                      annotationStyle='DARKNET',
@@ -711,12 +723,12 @@ def geoJsonToDARKNET(xmlFileName, geoJson, rasterImageName, im_id='',
     xmlFileName = xmlFileName.replace(".xml", ".txt")
     # print("creating {}".format(xmlFileName))
 
-    buildingList = gT.convert_wgs84geojson_to_pixgeojson(geoJson, rasterImageName,
-                                                         image_id=[],
-                                                         pixelgeojson=[],
-                                                         only_polygons=True,
-                                                         breakMultiPolygonGeo=True,
-                                                         pixPrecision=4)
+    buildingList = gT.convert_wgs84_geojson_to_pixel_geojson(geoJson, rasterImageName,
+                                                             image_id=[],
+                                                             pixelgeojson=[],
+                                                             only_polygons=True,
+                                                             breakMultiPolygonGeo=True,
+                                                             pixPrecision=4)
     #                        buildinglist.append({'ImageId': image_id,
     # 'BuildingId': building_id,
     # 'polyGeo': ogr.CreateGeometryFromWkt(geom.ExportToWkt()),
@@ -781,7 +793,7 @@ def geoJsonToDARKNET(xmlFileName, geoJson, rasterImageName, im_id='',
 
             rasterSize = (srcRaster.RasterXSize, srcRaster.RasterYSize)
 
-            lineOutput = convertPixDimensionToPercent(rasterSize, boxDim)
+            lineOutput = convert_pix_dimension_to_percent(rasterSize, boxDim)
             classNum = 0
             f.write('{} {} {} {} {}\n'.format(classNum,
                                               lineOutput[0],
@@ -979,10 +991,21 @@ def createInstanceSegmentation(rasterSrc, vectorSrc):
     json_data = open(vectorSrc)
     data = json.load(json_data)
     num_features = len(data['features'])
-    cell_array = np.zeros((num_features,), dtype=np.object)
-    for i in range(num_features):
-        cell_array[i] = createSegmentationByFeatureIndex(i, rasterSrc, vectorSrc, npDistFileName='', units='pixels')
-    return cell_array
+    print("Number of features ", num_features)
+
+    srcRas_ds = gdal.Open(rasterSrc)
+    rows = srcRas_ds.RasterXSize
+    cols = srcRas_ds.RasterYSize
+
+    return_array = np.zeros((cols, rows), dtype=np.uint8)
+
+    if(num_features > 0):
+        for i in range(num_features):
+            print("I'm at ", i)
+            print("File check : ", vectorSrc)
+            return_array = return_array + createSegmentationByFeatureIndex(i, rasterSrc, vectorSrc, npDistFileName='', units='pixels')
+
+    return return_array
 
 
 def createBoundariesByFeatureIndex(feature_index, rasterSrc, vectorSrc, npDistFileName='', units='pixels'):

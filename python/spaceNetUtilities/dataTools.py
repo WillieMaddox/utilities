@@ -72,8 +72,8 @@ def chipImage(rasterFileName, shapeFile, outputDirectory='', numPixelWidth=30,
         centroidX, centroidY, centroidZ = tmpGeom.Centroid().GetPoint()
         envelope = tmpGeom.GetEnvelope() #minX, maxX, minY, maxY
 
-        cX1, cY1 = gT.latlon2pixel(envelope[0], envelope[2], rasterFileName)
-        cX2, cY2 = gT.latlon2pixel(envelope[1], envelope[3], rasterFileName)
+        cX1, cY1 = gT.latlon_to_pixel(envelope[0], envelope[2], rasterFileName)
+        cX2, cY2 = gT.latlon_to_pixel(envelope[1], envelope[3], rasterFileName)
 
         if windowSize == 'static':
             numPixelWidth = numPixelWidth
@@ -87,7 +87,7 @@ def chipImage(rasterFileName, shapeFile, outputDirectory='', numPixelWidth=30,
 
         if numPixelWidth == 0.0:
             continue
-        cX, cY = gT.latlon2pixel(centroidY, centroidX, rasterFileName)
+        cX, cY = gT.latlon_to_pixel(centroidY, centroidX, rasterFileName)
 
 
         if ((cX > numPixelWidth and cX < imgShape[1] - numPixelWidth) and
