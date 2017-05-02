@@ -174,73 +174,6 @@ def createTruthPixelPolyPickle(truthPoly, pickleLocation=''):
             # get Source Line File Information
 
 
-def createNPPixArrayDist(rasterSrc, vectorSrc, npDistFileName='', units='pixels'):
-    ## open source vector file that truth data
-    source_ds = ogr.Open(vectorSrc)
-    source_layer = source_ds.GetLayer()
-
-    ## extract data from src Raster File to be emulated
-    ## open raster file that is to be emulated
-    srcRas_ds = gdal.Open(rasterSrc)
-    cols = srcRas_ds.RasterXSize
-    rows = srcRas_ds.RasterYSize
-    noDataValue = 0
-
-    if units == 'meters':
-        geoTrans, poly, ulX, ulY, lrX, lrY = gT.getRasterExtent(srcRas_ds)
-        transform_WGS84_To_UTM, transform_UTM_To_WGS84, utm_cs = gT.createUTMTransform(poly)
-        line = ogr.Geometry(ogr.wkbLineString)
-        line.AddPoint(geoTrans[0], geoTrans[3])
-        line.AddPoint(geoTrans[0] + geoTrans[1], geoTrans[3])
-
-        line.Transform(transform_WGS84_To_UTM)
-        metersIndex = line.Length()
-    else:
-        metersIndex = 1
-
-    ## create First raster memory layer
-    memdrv = gdal.GetDriverByName('MEM')
-    dst_ds = memdrv.Create('', cols, rows, 1, gdal.GDT_Byte)
-    dst_ds.SetGeoTransform(srcRas_ds.GetGeoTransform())
-    dst_ds.SetProjection(srcRas_ds.GetProjection())
-    band = dst_ds.GetRasterBand(1)
-    band.SetNoDataValue(noDataValue)
-
-    gdal.RasterizeLayer(dst_ds, [1], source_layer, burn_values=[255])
-    srcBand = dst_ds.GetRasterBand(1)
-
-    memdrv2 = gdal.GetDriverByName('MEM')
-    prox_ds = memdrv2.Create('', cols, rows, 1, gdal.GDT_Int16)
-    prox_ds.SetGeoTransform(srcRas_ds.GetGeoTransform())
-    prox_ds.SetProjection(srcRas_ds.GetProjection())
-    proxBand = prox_ds.GetRasterBand(1)
-    proxBand.SetNoDataValue(noDataValue)
-
-    options = ['NODATA=0']
-
-    gdal.ComputeProximity(srcBand, proxBand, options)
-
-    memdrv3 = gdal.GetDriverByName('MEM')
-    proxIn_ds = memdrv3.Create('', cols, rows, 1, gdal.GDT_Int16)
-    proxIn_ds.SetGeoTransform(srcRas_ds.GetGeoTransform())
-    proxIn_ds.SetProjection(srcRas_ds.GetProjection())
-    proxInBand = proxIn_ds.GetRasterBand(1)
-    proxInBand.SetNoDataValue(noDataValue)
-    options = ['NODATA=0', 'VALUES=0']
-    gdal.ComputeProximity(srcBand, proxInBand, options)
-
-    proxIn = gdalnumeric.BandReadAsArray(proxInBand)
-    proxOut = gdalnumeric.BandReadAsArray(proxBand)
-
-    proxTotal = proxIn.astype(float) - proxOut.astype(float)
-    proxTotal = proxTotal * metersIndex
-
-    if npDistFileName != '':
-        np.save(npDistFileName, proxTotal)
-
-    return proxTotal
-
-
 def createGeoJSONFromRaster(geoJsonFileName, array2d, geom, proj,
                             layerName="BuildingID",
                             fieldName="BuildingID"):
@@ -382,8 +315,7 @@ def createRasterFromGeoJson(srcGeoJson, srcRasterFileName, outRasterFileName):
     srcRaster = gdal.Open(srcRasterFileName)
 
     # Create the destination data source
-    target_ds = gdal.GetDriverByName('GTiff').Create(outRasterFileName, srcRaster.RasterXSize, srcRaster.RasterYSize, 1,
-                                                     gdal.GDT_Byte)
+    target_ds = gdal.GetDriverByName('GTiff').Create(outRasterFileName, srcRaster.RasterXSize, srcRaster.RasterYSize, 1, gdal.GDT_Byte)
     target_ds.SetGeoTransform(srcRaster.GetGeoTransform())
     target_ds.SetProjection(srcRaster.GetProjection())
     band = target_ds.GetRasterBand(1)
@@ -624,7 +556,7 @@ def geoJsonToPASCALVOC2012(xmlFileName, geoJson, rasterImageName,
             print(geomBufferIn.IsEmpty())
             print(geomBufferIn.IsSimple())
 
-            if not geomBufferIn.IsEmpty():
+            if geomBufferIn.GetArea() > 0.0:
                 outBufFeature = ogr.Feature(featureDefn)
                 outBufFeature.SetGeometry(geomBufferOut)
 
@@ -813,12 +745,12 @@ def geoJsonToDARKNET(xmlFileName, geoJson, rasterImageName,
 
 
 def createDistanceTransform(rasterSrc, vectorSrc, npDistFileName='', units='pixels'):
-    ## open source vector file that truth data
+    # open source vector file that truth data
     source_ds = ogr.Open(vectorSrc)
     source_layer = source_ds.GetLayer()
 
-    ## extract data from src Raster File to be emulated
-    ## open raster file that is to be emulated
+    # extract data from src Raster File to be emulated
+    # open raster file that is to be emulated
     srcRas_ds = gdal.Open(rasterSrc)
     cols = srcRas_ds.RasterXSize
     rows = srcRas_ds.RasterYSize
@@ -836,7 +768,7 @@ def createDistanceTransform(rasterSrc, vectorSrc, npDistFileName='', units='pixe
     else:
         metersIndex = 1
 
-    ## create First raster memory layer
+    # create First raster memory layer
     memdrv = gdal.GetDriverByName('MEM')
     dst_ds = memdrv.Create('', cols, rows, 1, gdal.GDT_Byte)
     dst_ds.SetGeoTransform(srcRas_ds.GetGeoTransform())
@@ -855,7 +787,7 @@ def createDistanceTransform(rasterSrc, vectorSrc, npDistFileName='', units='pixe
     proxBand.SetNoDataValue(noDataValue)
     options = ['NODATA=0']
 
-    ##compute distance to non-zero pixel values and scrBand and store in proxBand
+    # compute distance to non-zero pixel values and scrBand and store in proxBand
     gdal.ComputeProximity(srcBand, proxBand, options)
 
     memdrv3 = gdal.GetDriverByName('MEM')
@@ -866,13 +798,13 @@ def createDistanceTransform(rasterSrc, vectorSrc, npDistFileName='', units='pixe
     proxInBand.SetNoDataValue(noDataValue)
     options = ['NODATA=0', 'VALUES=0']
 
-    ##compute distance to zero pixel values and scrBand and store in proxInBand
+    # compute distance to zero pixel values and scrBand and store in proxInBand
     gdal.ComputeProximity(srcBand, proxInBand, options)
 
     proxIn = gdalnumeric.BandReadAsArray(proxInBand)
     proxOut = gdalnumeric.BandReadAsArray(proxBand)
 
-    ##distance tranform is the distance to zero pixel values minus distance to non-zero pixel values
+    # distance tranform is the distance to zero pixel values minus distance to non-zero pixel values
     proxTotal = proxIn.astype(float) - proxOut.astype(float)
     proxTotal = proxTotal * metersIndex
 
