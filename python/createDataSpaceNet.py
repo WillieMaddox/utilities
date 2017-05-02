@@ -6,10 +6,14 @@ from spaceNetUtilities import geoTools as gT
 import argparse
 
 
-def processRasterChip(rasterImage, rasterDescription, geojson, geojsonDescription, outputDirectory='',
-                      imagePixSize=-1, clipOverlap=0.0, randomClip=False,
+def processRasterChip(rasterImage, rasterDescription, geojson, geojsonDescription,
+                      outputDirectory='',
+                      imagePixSize=-1,
+                      clipOverlap=0.0,
+                      randomClip=False,
                       minpartialPerc=0.0,
                       outputPrefix=''):
+
     # cut Image to Size
     chipSummaryList = []
     if imagePixSize > 0:
@@ -34,6 +38,7 @@ def processRasterChip(rasterImage, rasterDescription, geojson, geojsonDescriptio
                        'chipName': rasterImage,
                        'geoVectorName': geojson,
                        'pixVectorName': ''}
+
         chipSummaryList.append(chipSummary)
 
     return chipSummaryList
@@ -160,14 +165,14 @@ if __name__ == '__main__':
     #                             --outputDirectory /data/spacenet_sample/annotations/ \
     #                             --imgSizePix 416
 
-    # python createDataSpaceNet.py /data/spacenet_sample/AOI_2_Vegas_Train/
-    # RGB-PanSharpen --outputDirectory /data/spacenet_sample/annotations/ --imgSizePix 416
-    # --annotationType PASCALVOC2012 --convertTo8Bit
+    # python createDataSpaceNet.py /data/spacenet_sample/AOI_2_Vegas_Train/ RGB-PanSharpen \
+    #                             --outputDirectory /data/spacenet_sample/annotations/ \
+    #                             --imgSizePix 416 --annotationType PASCALVOC2012 --convertTo8Bit
 
+    # python createDataSpaceNet.py /data/spacenet_sample/AOI_2_Vegas_Train/ RGB-PanSharpen \
+    #                             --outputDirectory /data/spacenet_sample/annotations/ \
+    #                             --imgSizePix 416 --annotationType DARKNET --convertTo8Bit
 
-    # python createDataSpaceNet.py /data/spacenet_sample/AOI_2_Vegas_Train/
-    # RGB-PanSharpen --outputDirectory /data/spacenet_sample/annotations/ --imgSizePix 416 --annotationType DARKNET
-    #  --convertTo8Bit
     parser = argparse.ArgumentParser(description='Process SrcData for Region ComputerVision Dataset')
     parser.add_argument("srcSpaceNetFolder",
                         help="location of Spacenet AOI Data i.e. '/path/to/spacenet/folder/'"

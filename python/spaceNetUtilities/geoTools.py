@@ -60,7 +60,7 @@ def import_chip_geojson(geojsonfilename, ImageId=''):
     return polys
 
 
-def mergePolyList(geojsonfilename):
+def merge_poly_list(geojsonfilename):
     multipolygon = ogr.Geometry(ogr.wkbMultiPolygon)
     datasource = ogr.Open(geojsonfilename, 0)
 
@@ -94,10 +94,7 @@ def read_wkt_csv(csv_path, removeNoBuildings=True, groundTruthFile=True):
             if removeNoBuildings:
                 if int(row[1]) != -1:
                     polyPix = ogr.CreateGeometryFromWkt(row[2])
-                    if groundTruthFile:
-                        polyGeo = ogr.CreateGeometryFromWkt(row[3])
-                    else:
-                        polyGeo = []
+                    polyGeo = ogr.CreateGeometryFromWkt(row[3]) if groundTruthFile else []
                     buildinglist.append({'ImageId': row[0], 'BuildingId': int(row[1]), 'polyPix': polyPix,
                                          'polyGeo': polyGeo,
                                          })
@@ -105,10 +102,7 @@ def read_wkt_csv(csv_path, removeNoBuildings=True, groundTruthFile=True):
             else:
 
                 polyPix = ogr.CreateGeometryFromWkt(row[2])
-                if groundTruthFile:
-                    polyGeo = ogr.CreateGeometryFromWkt(row[3])
-                else:
-                    polyGeo = []
+                polyGeo = ogr.CreateGeometryFromWkt(row[3]) if groundTruthFile else []
                 buildinglist.append({'ImageId': row[0], 'BuildingId': int(row[1]), 'polyPix': polyPix,
                                      'polyGeo': polyGeo,
                                      })
@@ -177,15 +171,10 @@ def latlon_to_pixel(lat, lon, input_raster='', targetsr='', geom_transform=''):
         transform = geom_transform
 
     x_origin = transform[0]
-    # print(x_origin)
     y_origin = transform[3]
-    # print(y_origin)
     pixel_width = transform[1]
-    # print(pixel_width)
     pixel_height = transform[5]
-    # print(pixel_height)
     geom.Transform(coord_trans)
-    # print(geom.GetPoint())
     x_pix = (geom.GetPoint()[0] - x_origin) / pixel_width
     y_pix = (geom.GetPoint()[1] - y_origin) / pixel_height
 
@@ -270,7 +259,7 @@ def createBoxFromLine(tmpGeom, ratio=1, halfWidth=-999, transformRequired=True, 
     return polyGeom, areaM, angRad, lengthM
 
 
-def pixel_to_geo_coord(xPix, yPix, inputRaster, sourceSR='', geomTransform='', targetSR=''):
+def pixel_to_geo_coord(x_pix, y_pix, inputRaster, sourceSR='', geomTransform='', targetSR=''):
     # If you want to garuntee lon lat output, specify TargetSR  otherwise, geocoords will be in image geo reference
     # targetSR = osr.SpatialReference()
     # targetSR.ImportFromEPSG(4326)
@@ -291,14 +280,13 @@ def pixel_to_geo_coord(xPix, yPix, inputRaster, sourceSR='', geomTransform='', t
         source_sr.ImportFromWkt(srcRaster.GetProjectionRef())
 
     geom = ogr.Geometry(ogr.wkbPoint)
-    xOrigin = geomTransform[0]
-    yOrigin = geomTransform[3]
-    pixelWidth = geomTransform[1]
-    pixelHeight = geomTransform[5]
-
-    xCoord = (xPix * pixelWidth) + xOrigin
-    yCoord = (yPix * pixelHeight) + yOrigin
-    geom.AddPoint(xCoord, yCoord)
+    x_origin = geomTransform[0]
+    y_origin = geomTransform[3]
+    pixel_width = geomTransform[1]
+    pixel_height = geomTransform[5]
+    x_coord = (x_pix * pixel_width) + x_origin
+    y_coord = (y_pix * pixel_height) + y_origin
+    geom.AddPoint(x_coord, y_coord)
 
     if performReprojection:
         if sourceSR == '':
@@ -311,8 +299,7 @@ def pixel_to_geo_coord(xPix, yPix, inputRaster, sourceSR='', geomTransform='', t
     return geom.GetX(), geom.GetY()
 
 
-def geo_polygon_to_pixel_polygon_WKT(geom, inputRaster, targetSR, geomTransform, breakMultiPolygonGeo=True,
-                                     pixPrecision=2):
+def geo_polygon_to_pixel_polygon_WKT(geom, inputRaster, targetSR, geomTransform, breakMultiPolygonGeo=True, pixPrecision=2):
     # Returns Pixel Coordinate List and GeoCoordinateList
 
     polygonPixBufferList = []
@@ -369,87 +356,84 @@ def geo_polygon_to_pixel_polygon_WKT(geom, inputRaster, targetSR, geomTransform,
     return polygonPixBufferWKTList
 
 
-def pixel_wkt_to_geo_wkt(geomWKT, inputRaster, targetSR='', geomTransform='', breakMultiPolygonPix=False):
-    # Returns  GeoCoordinateList from PixelCoordinateList
-    if geomTransform == '':
-        targetRaster = gdal.Open(inputRaster)
-        geomTransform = targetRaster.GetGeoTransform()
-
-    geom = ogr.CreateGeometryFromWkt(geomWKT)
-
-    polygonGeoBufferWKTList = []
-    polygonGeoBufferList = []
-    if geom.GetGeometryName() == 'POLYGON':
-        polygonGeo = ogr.Geometry(ogr.wkbPolygon)
-        for ring in geom:
-            # GetPoint returns a tuple not a Geometry
-            ringGeo = ogr.Geometry(ogr.wkbLinearRing)
-
-            for pIdx in xrange(ring.GetPointCount()):
-                xPix, yPix, zPix = ring.GetPoint(pIdx)
-                # xPix, yPix = latlon2pixel(lat, lon, inputRaster, targetSR, geomTransform)
-                lon, lat = pixel_to_geo_coord(xPix, yPix, inputRaster=inputRaster, targetSR=targetSR,
-                                              geomTransform=geomTransform)
-
-            polygonGeo.AddGeometry(ringGeo)
-        polygonGeoBuffer = polygonGeo.Buffer(0.0)
-        polygonGeoBufferList.append([polygonGeoBuffer, geom])
-
-    elif geom.GetGeometryName() == 'MULTIPOLYGON':
-
-        for poly in geom:
-            polygonGeo = ogr.Geometry(ogr.wkbPolygon)
-            for ring in poly:
-                # GetPoint returns a tuple not a Geometry
-                ringGeo = ogr.Geometry(ogr.wkbLinearRing)
-
-                for pIdx in xrange(ring.GetPointCount()):
-                    xPix, yPix, zPix = ring.GetPoint(pIdx)
-                    # xPix, yPix = latlon2pixel(lat, lon, inputRaster, targetSR, geomTransform)
-                    lon, lat = pixel_to_geo_coord(xPix, yPix, inputRaster=inputRaster, targetSR=targetSR,
-                                                  geomTransform=geomTransform)
-                    ringGeo.AddPoint(lon, lat)
-
-                polygonGeo.AddGeometry(ringGeo)
-            polygonGeoBuffer = polygonGeo.Buffer(0.0)
-            if breakMultiPolygonPix:
-                polygonGeoBufferList.append([polygonGeoBuffer, poly])
-            else:
-                polygonGeoBufferList.append([polygonGeoBuffer, geom])
-
-
-    elif geom.GetGeometryName() == 'LINESTRING':
-        lineGeo = ogr.Geometry(ogr.wkbLineString)
-        for pIdx in xrange(geom.GetPointCount()):
-            xPix, yPix, zPix = geom.GetPoint(pIdx)
-            lon, lat = pixel_to_geo_coord(xPix, yPix, inputRaster=inputRaster, targetSR=targetSR,
-                                          geomTransform=geomTransform)
-            lineGeo.AddPoint(lon, lat)
-
-        polygonGeoBufferList.append([lineGeo, geom])
-
-    elif geom.GetGeometryName() == 'POINT':
-        pointGeo = ogr.Geometry(ogr.wkbPoint)
-
-        for pIdx in xrange(geom.GetPointCount()):
-            xPix, yPix, zPix = geom.GetPoint(pIdx)
-            lon, lat = pixel_to_geo_coord(xPix, yPix, inputRaster=inputRaster, targetSR=targetSR,
-                                          geomTransform=geomTransform)
-            pointGeo.AddPoint(lon, lat)
-
-        polygonGeoBufferList.append([pointGeo, geom])
-
-    # for polygonTest in polygonGeoBufferList:
-    #    if polygonTest[0].GetGeometryName() == 'POLYGON':
-    #        polygonGeoBufferWKTList.append([polygonTest[0].ExportToWkt(), polygonTest[1].ExportToWkt()])
-    #    elif polygonTest[0].GetGeometryName() == 'MULTIPOLYGON':
-    #        for polygonTest2 in polygonTest[0]:
-    #            polygonGeoBufferWKTList.append([polygonTest2.ExportToWkt(), polygonTest[1].ExportToWkt()])
-
-
-
-    # [GeoWKT, PixWKT])
-    return polygonGeoBufferList
+# def pixel_wkt_to_geo_wkt(geomWKT, inputRaster, targetSR='', geomTransform='', breakMultiPolygonPix=False):
+#     # Returns  GeoCoordinateList from PixelCoordinateList
+#     if geomTransform == '':
+#         targetRaster = gdal.Open(inputRaster)
+#         geomTransform = targetRaster.GetGeoTransform()
+#
+#     geom = ogr.CreateGeometryFromWkt(geomWKT)
+#
+#     polygonGeoBufferWKTList = []
+#     polygonGeoBufferList = []
+#     if geom.GetGeometryName() == 'POLYGON':
+#         polygonGeo = ogr.Geometry(ogr.wkbPolygon)
+#         for ring in geom:
+#             # GetPoint returns a tuple not a Geometry
+#             ringGeo = ogr.Geometry(ogr.wkbLinearRing)
+#
+#             for pIdx in xrange(ring.GetPointCount()):
+#                 xPix, yPix, zPix = ring.GetPoint(pIdx)
+#                 # xPix, yPix = latlon2pixel(lat, lon, inputRaster, targetSR, geomTransform)
+#                 lon, lat = pixel_to_geo_coord(xPix, yPix, inputRaster=inputRaster, targetSR=targetSR,
+#                                               geomTransform=geomTransform)
+#
+#             polygonGeo.AddGeometry(ringGeo)
+#         polygonGeoBuffer = polygonGeo.Buffer(0.0)
+#         polygonGeoBufferList.append([polygonGeoBuffer, geom])
+#
+#     elif geom.GetGeometryName() == 'MULTIPOLYGON':
+#
+#         for poly in geom:
+#             polygonGeo = ogr.Geometry(ogr.wkbPolygon)
+#             for ring in poly:
+#                 # GetPoint returns a tuple not a Geometry
+#                 ringGeo = ogr.Geometry(ogr.wkbLinearRing)
+#
+#                 for pIdx in xrange(ring.GetPointCount()):
+#                     xPix, yPix, zPix = ring.GetPoint(pIdx)
+#                     # xPix, yPix = latlon2pixel(lat, lon, inputRaster, targetSR, geomTransform)
+#                     lon, lat = pixel_to_geo_coord(xPix, yPix, inputRaster=inputRaster, targetSR=targetSR,
+#                                                   geomTransform=geomTransform)
+#                     ringGeo.AddPoint(lon, lat)
+#
+#                 polygonGeo.AddGeometry(ringGeo)
+#             polygonGeoBuffer = polygonGeo.Buffer(0.0)
+#             if breakMultiPolygonPix:
+#                 polygonGeoBufferList.append([polygonGeoBuffer, poly])
+#             else:
+#                 polygonGeoBufferList.append([polygonGeoBuffer, geom])
+#
+#     elif geom.GetGeometryName() == 'LINESTRING':
+#         lineGeo = ogr.Geometry(ogr.wkbLineString)
+#         for pIdx in xrange(geom.GetPointCount()):
+#             xPix, yPix, zPix = geom.GetPoint(pIdx)
+#             lon, lat = pixel_to_geo_coord(xPix, yPix, inputRaster=inputRaster, targetSR=targetSR,
+#                                           geomTransform=geomTransform)
+#             lineGeo.AddPoint(lon, lat)
+#
+#         polygonGeoBufferList.append([lineGeo, geom])
+#
+#     elif geom.GetGeometryName() == 'POINT':
+#         pointGeo = ogr.Geometry(ogr.wkbPoint)
+#
+#         for pIdx in xrange(geom.GetPointCount()):
+#             xPix, yPix, zPix = geom.GetPoint(pIdx)
+#             lon, lat = pixel_to_geo_coord(xPix, yPix, inputRaster=inputRaster, targetSR=targetSR,
+#                                           geomTransform=geomTransform)
+#             pointGeo.AddPoint(lon, lat)
+#
+#         polygonGeoBufferList.append([pointGeo, geom])
+#
+#     # for polygonTest in polygonGeoBufferList:
+#     #    if polygonTest[0].GetGeometryName() == 'POLYGON':
+#     #        polygonGeoBufferWKTList.append([polygonTest[0].ExportToWkt(), polygonTest[1].ExportToWkt()])
+#     #    elif polygonTest[0].GetGeometryName() == 'MULTIPOLYGON':
+#     #        for polygonTest2 in polygonTest[0]:
+#     #            polygonGeoBufferWKTList.append([polygonTest2.ExportToWkt(), polygonTest[1].ExportToWkt()])
+#
+#     # [GeoWKT, PixWKT])
+#     return polygonGeoBufferList
 
 
 def geo_wkt_to_pixel_wkt(geom, inputRaster, targetSR, geomTransform, pixPrecision=2):
@@ -479,7 +463,7 @@ def geo_wkt_to_pixel_wkt(geom, inputRaster, targetSR, geomTransform, pixPrecisio
 
         for poly in geom:
             polygonPix = ogr.Geometry(ogr.wkbPolygon)
-            for ring in geom:
+            for ring in poly:
                 # GetPoint returns a tuple not a Geometry
                 ringPix = ogr.Geometry(ogr.wkbLinearRing)
 
@@ -494,6 +478,7 @@ def geo_wkt_to_pixel_wkt(geom, inputRaster, targetSR, geomTransform, pixPrecisio
                 polygonPix.AddGeometry(ringPix)
                 polygonPixBuffer = polygonPix.Buffer(0.0)
                 geom_list.append([polygonPixBuffer, geom])
+
     elif geom.GetGeometryName() == 'LINESTRING':
         line = ogr.Geometry(ogr.wkbLineString)
         for pIdx in xrange(geom.GetPointCount()):
@@ -517,9 +502,7 @@ def geo_wkt_to_pixel_wkt(geom, inputRaster, targetSR, geomTransform, pixPrecisio
         geom_list.append([point, geom])
 
     for polygonTest in geom_list:
-        if polygonTest[0].GetGeometryName() == 'POLYGON' or \
-                        polygonTest[0].GetGeometryName() == 'LINESTRING' or \
-                        polygonTest[0].GetGeometryName() == 'POINT':
+        if polygonTest[0].GetGeometryName() in ('POLYGON', 'LINESTRING', 'POINT'):
             geom_pix_wkt_list.append([polygonTest[0].ExportToWkt(), polygonTest[1].ExportToWkt()])
         elif polygonTest[0].GetGeometryName() == 'MULTIPOLYGON':
             for polygonTest2 in polygonTest[0]:
@@ -528,8 +511,13 @@ def geo_wkt_to_pixel_wkt(geom, inputRaster, targetSR, geomTransform, pixPrecisio
     return geom_pix_wkt_list
 
 
-def convert_wgs84_geojson_to_pixel_geojson(wgs84geojson, inputraster, image_id=[], pixelgeojson=[], only_polygons=True,
-                                           breakMultiPolygonGeo=True, pixPrecision=2):
+def convert_wgs84_geojson_to_pixel_geojson(wgs84geojson, inputraster,
+                                           image_id=[],
+                                           pixelgeojson=[],
+                                           only_polygons=True,
+                                           breakMultiPolygonGeo=True,
+                                           pixPrecision=2):
+
     dataSource = ogr.Open(wgs84geojson, 0)
     layer = dataSource.GetLayer()
     # print(layer.GetFeatureCount())
@@ -584,24 +572,24 @@ def convert_wgs84_geojson_to_pixel_geojson(wgs84geojson, inputraster, image_id=[
     return buildinglist
 
 
-def convert_pixel_wkt_list_to_wgs84_wkt_list(inputRaster, wktPolygonPixList):
-    ## returns # [[GeoWKT, PixWKT], ...]
-    wgs84WKTList = []
-    if os.path.isfile(inputRaster):
-        srcRaster = gdal.Open(inputRaster)
-        targetSR = osr.SpatialReference()
-        targetSR.ImportFromWkt(srcRaster.GetProjectionRef())
-        geomTransform = srcRaster.GetGeoTransform()
-
-    for wktPolygonPix in wktPolygonPixList:
-        geom_wkt_list = pixel_wkt_to_geo_wkt(wktPolygonPix, inputRaster, targetSR='',
-                                             geomTransform=geomTransform,
-                                             breakMultiPolygonPix=False)
-
-        wgs84WKTList.extend(geom_wkt_list)
-
-    # [[GeoWKT, PixWKT], ...]
-    return wgs84WKTList
+# def convert_pixel_wkt_list_to_wgs84_wkt_list(inputRaster, wktPolygonPixList):
+#     ## returns # [[GeoWKT, PixWKT], ...]
+#     wgs84WKTList = []
+#     if os.path.isfile(inputRaster):
+#         srcRaster = gdal.Open(inputRaster)
+#         targetSR = osr.SpatialReference()
+#         targetSR.ImportFromWkt(srcRaster.GetProjectionRef())
+#         geomTransform = srcRaster.GetGeoTransform()
+#
+#     for wktPolygonPix in wktPolygonPixList:
+#         geom_wkt_list = pixel_wkt_to_geo_wkt(wktPolygonPix, inputRaster, targetSR='',
+#                                              geomTransform=geomTransform,
+#                                              breakMultiPolygonPix=False)
+#
+#         wgs84WKTList.extend(geom_wkt_list)
+#
+#     # [[GeoWKT, PixWKT], ...]
+#     return wgs84WKTList
 
 
 def create_rtree_from_dict(buildinglist):
@@ -656,7 +644,7 @@ def utm_getZone(longitude):
 
 
 def utm_isNorthern(latitude):
-    if (latitude < 0.0):
+    if latitude < 0.0:
         return 0
     else:
         return 1
@@ -668,7 +656,7 @@ def createUTMTransform(polyGeom):
     is_northern = utm_isNorthern(polyGeom.GetEnvelope()[2])
     utm_cs = osr.SpatialReference()
     utm_cs.SetWellKnownGeogCS('WGS84')
-    utm_cs.SetUTM(utm_zone, is_northern);
+    utm_cs.SetUTM(utm_zone, is_northern)
     wgs84_cs = osr.SpatialReference()
     wgs84_cs.ImportFromEPSG(4326)
 
