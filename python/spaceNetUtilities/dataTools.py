@@ -7,12 +7,10 @@ from math import ceil
 import math
 
 
-
 def chipImage(rasterFileName, shapeFile, outputDirectory='', numPixelWidth=30,
-              finalImageSize = 256, rotationList=np.array([]), outputFormat='.png', rotateNorth=False,
-              numPixelSetByLine='', windowSize = 'static',
+              finalImageSize=256, rotationList=np.array([]), outputFormat='.png', rotateNorth=False,
+              numPixelSetByLine='', windowSize='static',
               truthFile='', sortbyCount='Yes', outputFile=''):
-
     baseName, fileExt = os.path.splitext(rasterFileName)
     baseDir = os.path.dirname(rasterFileName)
     baseName = os.path.basename(baseName)
@@ -70,7 +68,7 @@ def chipImage(rasterFileName, shapeFile, outputDirectory='', numPixelWidth=30,
         #    label = 0
         # Convert the layer extent to image pixel coordinates
         centroidX, centroidY, centroidZ = tmpGeom.Centroid().GetPoint()
-        envelope = tmpGeom.GetEnvelope() #minX, maxX, minY, maxY
+        envelope = tmpGeom.GetEnvelope()  # minX, maxX, minY, maxY
 
         cX1, cY1 = gT.latlon_to_pixel(envelope[0], envelope[2], rasterFileName)
         cX2, cY2 = gT.latlon_to_pixel(envelope[1], envelope[3], rasterFileName)
@@ -88,7 +86,6 @@ def chipImage(rasterFileName, shapeFile, outputDirectory='', numPixelWidth=30,
         if numPixelWidth == 0.0:
             continue
         cX, cY = gT.latlon_to_pixel(centroidY, centroidX, rasterFileName)
-
 
         if ((cX > numPixelWidth and cX < imgShape[1] - numPixelWidth) and
                 (cY > numPixelWidth and cY < imgShape[0] - numPixelWidth)):
@@ -127,7 +124,6 @@ def chipImage(rasterFileName, shapeFile, outputDirectory='', numPixelWidth=30,
                 dstFinal = cv2.resize(res[lrYdst:ulYdst, lrXdst:ulXdst, :], (finalImageSize, finalImageSize),
                                       interpolation=cv2.INTER_CUBIC)
 
-
             fileName = os.path.join(originalDirectory,
                                     baseName + str(int(ulX)) + '_' +
                                     str(int(lrY)) +
@@ -137,7 +133,6 @@ def chipImage(rasterFileName, shapeFile, outputDirectory='', numPixelWidth=30,
             cv2.imwrite(fileName, dstFinal)
             idstring = baseName + str(int(ulX)) + '_' + str(int(lrY)) + '_ROT_' + str(
                 round(angFromNor, 1)) + '_label_' + str(int(label)) + outputFormat
-
 
             if rotateNorth:
 
@@ -187,5 +182,3 @@ def chipImage(rasterFileName, shapeFile, outputDirectory='', numPixelWidth=30,
                     cv2.imwrite(fileName, dstFinal)
 
     return outputDirectory
-
-
