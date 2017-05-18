@@ -11,8 +11,8 @@ import math
 def chipImage(rasterFileName, shapeFile, outputDirectory='', numPixelWidth=30,
               finalImageSize = 256, rotationList=np.array([]), outputFormat='.png', rotateNorth=False,
               numPixelSetByLine='', windowSize = 'static',
-              truthFile='', sortbyCount='Yes', outputFile=''
-              ):
+              truthFile='', sortbyCount='Yes', outputFile=''):
+
     baseName, fileExt = os.path.splitext(rasterFileName)
     baseDir = os.path.dirname(rasterFileName)
     baseName = os.path.basename(baseName)
